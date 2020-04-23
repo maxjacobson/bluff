@@ -2,8 +2,8 @@ module Main exposing (main)
 
 import Browser
 import Browser.Navigation as Nav
-import Html exposing (a, div, form, h1, input, p, text)
-import Html.Attributes exposing (attribute, href)
+import Html exposing (a, div, footer, form, h1, input, p, text)
+import Html.Attributes exposing (attribute, href, target)
 import Html.Events exposing (onInput, onSubmit)
 import Http
 import Json.Decode as D exposing (Decoder, field, string)
@@ -44,6 +44,7 @@ type alias GamePageModel =
 type Page
     = HomePage HomePageModel
     | GamePage GamePageModel
+    | AboutPage
     | NotFound
 
 
@@ -56,6 +57,9 @@ pageFromUrl url =
     case url.path of
         "/" ->
             HomePage (HomePageModel "")
+
+        "/about" ->
+            AboutPage
 
         _ ->
             case gameIdFromUrl url of
@@ -96,6 +100,9 @@ titleForPage page =
         NotFound ->
             "Not Found - Bluff"
 
+        AboutPage ->
+            "About - Bluff"
+
 
 cmdWhenLoadingPage : Page -> String -> Cmd Msg
 cmdWhenLoadingPage page apiRoot =
@@ -110,6 +117,9 @@ cmdWhenLoadingPage page apiRoot =
             Cmd.none
 
         NotFound ->
+            Cmd.none
+
+        AboutPage ->
             Cmd.none
 
 
@@ -218,6 +228,7 @@ subscriptions _ =
     Sub.none
 
 
+viewHeader : Page -> Html.Html Msg
 viewHeader page =
     case page of
         HomePage _ ->
@@ -227,6 +238,13 @@ viewHeader page =
             h1 [] [ a [ href "/ " ] [ text "Bluff" ] ]
 
 
+viewFooter : Html.Html Msg
+viewFooter =
+    footer []
+        [ p [] [ a [ href "/about" ] [ text "About" ] ]
+        ]
+
+
 view : Model -> Browser.Document Msg
 view model =
     { title = titleForPage model.currentPage
@@ -234,6 +252,16 @@ view model =
         [ div []
             [ viewHeader model.currentPage
             , case model.currentPage of
+                AboutPage ->
+                    div []
+                        [ p []
+                            [ text "It's a game."
+                            ]
+                        , p []
+                            [ a [ href "https://github.com/maxjacobson/bluff", target "_blank" ] [ text "Source code." ]
+                            ]
+                        ]
+
                 HomePage _ ->
                     div []
                         [ p [] [ text "Bluff is a poker game for bluffers. Enter your group's game ID to proceed." ]
@@ -258,6 +286,7 @@ view model =
 
                 NotFound ->
                     div [] [ text "Page not found" ]
+            , viewFooter
             ]
         ]
     }
