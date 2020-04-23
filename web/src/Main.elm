@@ -84,6 +84,19 @@ gameDataDecoder =
         (D.field "spectators_count" D.int)
 
 
+titleForPage : Page -> String
+titleForPage page =
+    case page of
+        HomePage _ ->
+            "Bluff"
+
+        GamePage model ->
+            model.gameIdFromUrl ++ " - Bluff"
+
+        NotFound ->
+            "Not Found - Bluff"
+
+
 cmdWhenLoadingPage : Page -> String -> Cmd Msg
 cmdWhenLoadingPage page apiRoot =
     case page of
@@ -200,19 +213,6 @@ update msg model =
             ( newModel, Cmd.none )
 
 
-
--- let
---     gameData : Maybe GameData
---     gameData =
---         case result of
---             Ok gameAsString ->
---                 Just gameAsString
---             Err _ ->
---                 Nothing
--- in
--- ( { model | gameData = gameData }, Cmd.none )
-
-
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.none
@@ -220,7 +220,7 @@ subscriptions _ =
 
 view : Model -> Browser.Document Msg
 view model =
-    { title = "Bluff"
+    { title = titleForPage model.currentPage
     , body =
         [ div []
             [ h1 [] [ text "Bluff" ]
