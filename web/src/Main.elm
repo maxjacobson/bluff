@@ -26,6 +26,7 @@ type alias Model =
     , url : Url.Url
     , gameID : Maybe GameID
     , currentPage : Page
+    , gameData : Maybe String
     }
 
 
@@ -68,6 +69,22 @@ gameIDFromUrl url =
             Just anything
 
 
+cmdWhenLoadingPage : Page -> Cmd Msg
+cmdWhenLoadingPage page =
+    case page of
+        GamePage gameID ->
+            Http.get
+                { url = "http://localhost:3000/games/" ++ gameID ++ ".json"
+                , expect = Http.expectString GotGameAsString
+                }
+
+        HomePage ->
+            Cmd.none
+
+        NotFound ->
+            Cmd.none
+
+
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init _ url key =
     let
@@ -75,20 +92,9 @@ init _ url key =
             pageFromUrl url
 
         cmd =
-            case page of
-                GamePage gameID ->
-                    Http.get
-                        { url = "http://localhost:3000/games/" ++ gameID ++ ".json"
-                        , expect = Http.expectString GotGameAsString
-                        }
-
-                HomePage ->
-                    Cmd.none
-
-                NotFound ->
-                    Cmd.none
+            cmdWhenLoadingPage page
     in
-    ( Model key url Nothing page, cmd )
+    ( Model key url Nothing page Nothing, cmd )
 
 
 type Msg
@@ -125,17 +131,26 @@ update msg model =
             let
                 newPage =
                     pageFromUrl url
+
+                cmd =
+                    cmdWhenLoadingPage newPage
             in
             ( { model | url = url, currentPage = newPage }
-            , Cmd.none
+            , cmd
             )
 
         GotGameAsString result ->
             let
-                _ =
-                    Debug.log "GotGameAsString result " result
+                gameData : Maybe String
+                gameData =
+                    case result of
+                        Ok gameAsString ->
+                            Just gameAsString
+
+                        Err _ ->
+                            Nothing
             in
-            ( model, Cmd.none )
+            ( { model | gameData = gameData }, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -164,6 +179,12 @@ view model =
                         [ p []
                             [ text ("You are on the game page for game ID: " ++ gameID)
                             ]
+                        , case model.gameData of
+                            Just gameData ->
+                                p [] [ text gameData ]
+
+                            Nothing ->
+                                text "Loading gameData"
                         ]
 
                 NotFound ->
