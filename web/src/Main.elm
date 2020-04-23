@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Browser.Navigation as Nav
-import Html exposing (..)
+import Html exposing (div, text)
 import Url
 
 
@@ -28,8 +28,8 @@ type alias Flags =
     ()
 
 
-init : flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
-init flags url key =
+init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init _ url key =
     ( Model key url, Cmd.none )
 
 
@@ -56,12 +56,12 @@ update msg model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.none
 
 
 view : Model -> Browser.Document Msg
-view model =
+view _ =
     { title = "Bluff"
     , body =
         [ div []
