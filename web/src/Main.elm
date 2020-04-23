@@ -6,6 +6,7 @@ import Html exposing (div, form, h1, input, p, text)
 import Html.Attributes exposing (attribute)
 import Html.Events exposing (onInput, onSubmit)
 import Http
+import Json.Decode as D exposing (Decoder, field, string)
 import Url
 
 
@@ -26,7 +27,7 @@ type alias Model =
     , url : Url.Url
     , gameID : Maybe GameID
     , currentPage : Page
-    , gameData : Maybe String
+    , gameData : Maybe GameData
     }
 
 
@@ -69,13 +70,21 @@ gameIDFromUrl url =
             Just anything
 
 
+gameDataDecoder : Decoder GameData
+gameDataDecoder =
+    D.map3 GameData
+        (D.field "id" D.string)
+        (D.field "players_count" D.int)
+        (D.field "spectators_count" D.int)
+
+
 cmdWhenLoadingPage : Page -> Cmd Msg
 cmdWhenLoadingPage page =
     case page of
         GamePage gameID ->
             Http.get
                 { url = "http://localhost:3000/games/" ++ gameID ++ ".json"
-                , expect = Http.expectString GotGameAsString
+                , expect = Http.expectJson GotGameData gameDataDecoder
                 }
 
         HomePage ->
@@ -102,7 +111,14 @@ type Msg
     | UpdatedGameID String
     | SubmittedGoToGame
     | UrlChanged Url.Url
-    | GotGameAsString (Result Http.Error String)
+    | GotGameData (Result Http.Error GameData)
+
+
+type alias GameData =
+    { identifier : String
+    , playerCount : Int
+    , spectatorCount : Int
+    }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -139,9 +155,9 @@ update msg model =
             , cmd
             )
 
-        GotGameAsString result ->
+        GotGameData result ->
             let
-                gameData : Maybe String
+                gameData : Maybe GameData
                 gameData =
                     case result of
                         Ok gameAsString ->
@@ -181,7 +197,7 @@ view model =
                             ]
                         , case model.gameData of
                             Just gameData ->
-                                p [] [ text gameData ]
+                                p [] [ text ("Players count is " ++ String.fromInt gameData.playerCount) ]
 
                             Nothing ->
                                 text "Loading gameData"
