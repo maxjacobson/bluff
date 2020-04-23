@@ -54,9 +54,10 @@ Deploy:
 
 Just push to GitHub, and Netlify will take care of it.
 
-URL:
+URLs:
 
-<https://bluff.netlify.app>
+- <https://bluff.netlify.app>
+- <https://www.bluff.website>
 
 ## Scripting
 
