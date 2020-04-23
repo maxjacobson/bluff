@@ -3,7 +3,7 @@
 set -e
 
 echo "===> Running elm-format"
-elm-format --validate web/src
+elm-format --validate web
 echo "===> elm-format satisfied"
 
 echo "===> Running rubocop"
