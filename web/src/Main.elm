@@ -2,8 +2,8 @@ module Main exposing (main)
 
 import Browser
 import Browser.Navigation as Nav
-import Html exposing (div, form, h1, input, p, text)
-import Html.Attributes exposing (attribute)
+import Html exposing (a, div, form, h1, input, p, text)
+import Html.Attributes exposing (attribute, href)
 import Html.Events exposing (onInput, onSubmit)
 import Http
 import Json.Decode as D exposing (Decoder, field, string)
@@ -218,12 +218,21 @@ subscriptions _ =
     Sub.none
 
 
+viewHeader page =
+    case page of
+        HomePage _ ->
+            h1 [] [ text "Bluff" ]
+
+        anything ->
+            h1 [] [ a [ href "/ " ] [ text "Bluff" ] ]
+
+
 view : Model -> Browser.Document Msg
 view model =
     { title = titleForPage model.currentPage
     , body =
         [ div []
-            [ h1 [] [ text "Bluff" ]
+            [ viewHeader model.currentPage
             , case model.currentPage of
                 HomePage _ ->
                     div []
