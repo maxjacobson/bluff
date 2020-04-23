@@ -26,22 +26,23 @@ type alias Model =
     { key : Nav.Key
     , url : Url.Url
     , currentPage : Page
-    , gameData : Maybe GameData
     }
 
 
 type alias HomePageModel =
-    { gameId : GameId
+    { gameId : String
     }
 
 
-type alias GameId =
-    String
+type alias GamePageModel =
+    { gameData : Maybe GameData
+    , gameIdFromUrl : String
+    }
 
 
 type Page
     = HomePage HomePageModel
-    | GamePage GameId
+    | GamePage GamePageModel
     | NotFound
 
 
@@ -58,13 +59,13 @@ pageFromUrl url =
         _ ->
             case gameIdFromUrl url of
                 Just gameId ->
-                    GamePage gameId
+                    GamePage (GamePageModel Nothing gameId)
 
                 _ ->
                     NotFound
 
 
-gameIdFromUrl : Url.Url -> Maybe GameId
+gameIdFromUrl : Url.Url -> Maybe String
 gameIdFromUrl url =
     case String.dropLeft 1 url.path of
         "" ->
@@ -85,9 +86,9 @@ gameDataDecoder =
 cmdWhenLoadingPage : Page -> Cmd Msg
 cmdWhenLoadingPage page =
     case page of
-        GamePage gameId ->
+        GamePage gamePageModel ->
             Http.get
-                { url = "http://localhost:3000/games/" ++ gameId ++ ".json"
+                { url = "http://localhost:3000/games/" ++ gamePageModel.gameIdFromUrl ++ ".json"
                 , expect = Http.expectJson GotGameData gameDataDecoder
                 }
 
@@ -107,7 +108,7 @@ init _ url key =
         cmd =
             cmdWhenLoadingPage page
     in
-    ( Model key url page Nothing, cmd )
+    ( Model key url page, cmd )
 
 
 type Msg
@@ -173,16 +174,36 @@ update msg model =
 
         GotGameData result ->
             let
-                gameData : Maybe GameData
-                gameData =
-                    case result of
-                        Ok gameAsString ->
-                            Just gameAsString
+                newPage =
+                    case model.currentPage of
+                        GamePage gamePageModel ->
+                            case result of
+                                Ok newGameData ->
+                                    GamePage { gamePageModel | gameData = Just newGameData }
 
-                        Err _ ->
-                            Nothing
+                                Err _ ->
+                                    GamePage { gamePageModel | gameData = Nothing }
+
+                        anything ->
+                            anything
+
+                newModel =
+                    { model | currentPage = newPage }
             in
-            ( { model | gameData = gameData }, Cmd.none )
+            ( newModel, Cmd.none )
+
+
+
+-- let
+--     gameData : Maybe GameData
+--     gameData =
+--         case result of
+--             Ok gameAsString ->
+--                 Just gameAsString
+--             Err _ ->
+--                 Nothing
+-- in
+-- ( { model | gameData = gameData }, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -206,12 +227,12 @@ view model =
                             ]
                         ]
 
-                GamePage gameId ->
+                GamePage gamePageModel ->
                     div []
                         [ p []
-                            [ text ("You are on the game page for game ID: " ++ gameId)
+                            [ text ("You are on the game page for game ID: " ++ gamePageModel.gameIdFromUrl)
                             ]
-                        , case model.gameData of
+                        , case gamePageModel.gameData of
                             Just gameData ->
                                 p [] [ text ("Players count is " ++ String.fromInt gameData.playerCount) ]
 
