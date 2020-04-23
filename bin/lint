@@ -7,5 +7,7 @@ elm-format --validate web/src
 echo "===> elm-format satisfied"
 
 echo "===> Running rubocop"
-cd api && bundle exec rubocop && cd ..
+cd api
+bundle exec rubocop
+cd ..
 echo "===> rubocop satisfied"
