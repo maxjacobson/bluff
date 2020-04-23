@@ -2,6 +2,9 @@
 
 An online version of [Blind Man's Bluff](<https://en.wikipedia.org/wiki/Blind_man%27s_bluff_(poker)>).
 
+A work in progress.
+See <https://github.com/maxjacobson/bluff/projects/1>
+
 ## Architecture overview
 
 ### ./api
