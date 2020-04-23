@@ -1,6 +1,6 @@
 # Bluff
 
-An online version of [Blind Man's Bluff](https://en.wikipedia.org/wiki/Blind_man%27s_bluff_(poker)).
+An online version of [Blind Man's Bluff](<https://en.wikipedia.org/wiki/Blind_man%27s_bluff_(poker)>).
 
 ## Architecture overview
 
@@ -38,3 +38,9 @@ Boot:
 cd web
 PORT=3001 elm-app start
 ```
+
+## Scripting
+
+### bin/lint
+
+Run this one to check that our linting/formatting tools are satisfied.

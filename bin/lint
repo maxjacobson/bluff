@@ -1,0 +1,7 @@
+#!/bin/sh
+
+set -e
+
+echo "===> Running elm-format"
+elm-format --validate web/src
+echo "===> elm-format satisfied"
