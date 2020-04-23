@@ -3,7 +3,7 @@ module Main exposing (main)
 import Browser
 import Browser.Navigation as Nav
 import Html exposing (a, div, footer, form, h1, input, p, text)
-import Html.Attributes exposing (attribute, href, target)
+import Html.Attributes exposing (attribute, disabled, href, target)
 import Html.Events exposing (onInput, onSubmit)
 import Http
 import Json.Decode as D exposing (Decoder, field, string)
@@ -262,12 +262,12 @@ view model =
                             ]
                         ]
 
-                HomePage _ ->
+                HomePage homePageModel ->
                     div []
                         [ p [] [ text "Bluff is a poker game for bluffers. Enter your group's game ID to proceed." ]
                         , form [ onSubmit SubmittedGoToGame ]
                             [ input [ attribute "type" "text", attribute "placeholder" "Your group's game ID", onInput UpdatedGameID ] []
-                            , input [ attribute "type" "submit", attribute "value" "Go" ] []
+                            , input [ attribute "type" "submit", attribute "value" "Go", disabled (String.isEmpty homePageModel.gameId) ] []
                             ]
                         ]
 
