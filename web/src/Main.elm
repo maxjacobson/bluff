@@ -25,19 +25,23 @@ main =
 type alias Model =
     { key : Nav.Key
     , url : Url.Url
-    , gameID : Maybe GameID
     , currentPage : Page
     , gameData : Maybe GameData
     }
 
 
-type alias GameID =
+type alias HomePageModel =
+    { gameId : GameId
+    }
+
+
+type alias GameId =
     String
 
 
 type Page
-    = HomePage
-    | GamePage GameID
+    = HomePage HomePageModel
+    | GamePage GameId
     | NotFound
 
 
@@ -49,19 +53,19 @@ pageFromUrl : Url.Url -> Page
 pageFromUrl url =
     case url.path of
         "/" ->
-            HomePage
+            HomePage (HomePageModel "")
 
         _ ->
-            case gameIDFromUrl url of
-                Just gameID ->
-                    GamePage gameID
+            case gameIdFromUrl url of
+                Just gameId ->
+                    GamePage gameId
 
                 _ ->
                     NotFound
 
 
-gameIDFromUrl : Url.Url -> Maybe GameID
-gameIDFromUrl url =
+gameIdFromUrl : Url.Url -> Maybe GameId
+gameIdFromUrl url =
     case String.dropLeft 1 url.path of
         "" ->
             Nothing
@@ -81,13 +85,13 @@ gameDataDecoder =
 cmdWhenLoadingPage : Page -> Cmd Msg
 cmdWhenLoadingPage page =
     case page of
-        GamePage gameID ->
+        GamePage gameId ->
             Http.get
-                { url = "http://localhost:3000/games/" ++ gameID ++ ".json"
+                { url = "http://localhost:3000/games/" ++ gameId ++ ".json"
                 , expect = Http.expectJson GotGameData gameDataDecoder
                 }
 
-        HomePage ->
+        HomePage _ ->
             Cmd.none
 
         NotFound ->
@@ -103,7 +107,7 @@ init _ url key =
         cmd =
             cmdWhenLoadingPage page
     in
-    ( Model key url Nothing page Nothing, cmd )
+    ( Model key url page Nothing, cmd )
 
 
 type Msg
@@ -125,14 +129,26 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         UpdatedGameID newGameId ->
-            ( { model | gameID = Just newGameId }, Cmd.none )
+            let
+                newPage =
+                    case model.currentPage of
+                        HomePage homePageModel ->
+                            HomePage { homePageModel | gameId = newGameId }
+
+                        anything ->
+                            anything
+
+                newModel =
+                    { model | currentPage = newPage }
+            in
+            ( newModel, Cmd.none )
 
         SubmittedGoToGame ->
-            case model.gameID of
-                Just gameID ->
-                    ( model, Nav.pushUrl model.key ("/" ++ gameID) )
+            case model.currentPage of
+                HomePage homePageModel ->
+                    ( model, Nav.pushUrl model.key ("/" ++ homePageModel.gameId) )
 
-                Nothing ->
+                _ ->
                     ( model, Cmd.none )
 
         UrlRequested urlRequest ->
@@ -181,7 +197,7 @@ view model =
         [ div []
             [ h1 [] [ text "Bluff" ]
             , case model.currentPage of
-                HomePage ->
+                HomePage _ ->
                     div []
                         [ p [] [ text "Bluff is a poker game for bluffers. Enter your group's game ID to proceed." ]
                         , form [ onSubmit SubmittedGoToGame ]
@@ -190,10 +206,10 @@ view model =
                             ]
                         ]
 
-                GamePage gameID ->
+                GamePage gameId ->
                     div []
                         [ p []
-                            [ text ("You are on the game page for game ID: " ++ gameID)
+                            [ text ("You are on the game page for game ID: " ++ gameId)
                             ]
                         , case model.gameData of
                             Just gameData ->
