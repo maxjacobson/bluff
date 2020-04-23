@@ -29,6 +29,10 @@ git remote add heroku https://git.heroku.com/bluff-api.git
 bin/deploy-api
 ```
 
+URL:
+
+<https://bluff-api.herokuapp.com>
+
 ### ./web
 
 The frontend is an Elm app.
@@ -45,6 +49,14 @@ Boot:
 cd web
 PORT=3001 elm-app start
 ```
+
+Deploy:
+
+Just push to GitHub, and Netlify will take care of it.
+
+URL:
+
+<https://bluff.netlify.app>
 
 ## Scripting
 

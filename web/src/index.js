@@ -1,9 +1,12 @@
-import './main.css';
-import { Elm } from './Main.elm';
-import * as serviceWorker from './serviceWorker';
+import "./main.css";
+import { Elm } from "./Main.elm";
+import * as serviceWorker from "./serviceWorker";
 
 Elm.Main.init({
-  node: document.getElementById('root')
+  node: document.getElementById("root"),
+  flags: {
+    apiRoot: process.env.ELM_APP_API_ROOT || "http://localhost:3000",
+  },
 });
 
 // If you want your app to work offline and load faster, you can change

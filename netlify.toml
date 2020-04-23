@@ -1,0 +1,13 @@
+[build]
+  base = "web/"
+  command = "npx --package create-elm-app@4.2.8 elm-app build"
+  publish = "build"
+
+[context.production]
+  environment = { ELM_APP_API_ROOT = "https://bluff-api.herokuapp.com" }
+
+# Ensure all routes are handled by the elm app
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

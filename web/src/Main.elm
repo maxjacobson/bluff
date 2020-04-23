@@ -23,9 +23,10 @@ main =
 
 
 type alias Model =
-    { key : Nav.Key
-    , url : Url.Url
+    { currentUrl : Url.Url
     , currentPage : Page
+    , key : Nav.Key
+    , apiRoot : String
     }
 
 
@@ -47,7 +48,7 @@ type Page
 
 
 type alias Flags =
-    ()
+    { apiRoot : String }
 
 
 pageFromUrl : Url.Url -> Page
@@ -83,12 +84,12 @@ gameDataDecoder =
         (D.field "spectators_count" D.int)
 
 
-cmdWhenLoadingPage : Page -> Cmd Msg
-cmdWhenLoadingPage page =
+cmdWhenLoadingPage : Page -> String -> Cmd Msg
+cmdWhenLoadingPage page apiRoot =
     case page of
         GamePage gamePageModel ->
             Http.get
-                { url = "http://localhost:3000/games/" ++ gamePageModel.gameIdFromUrl ++ ".json"
+                { url = apiRoot ++ "/games/" ++ gamePageModel.gameIdFromUrl ++ ".json"
                 , expect = Http.expectJson GotGameData gameDataDecoder
                 }
 
@@ -100,15 +101,21 @@ cmdWhenLoadingPage page =
 
 
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
-init _ url key =
+init flags url key =
     let
         page =
             pageFromUrl url
 
         cmd =
-            cmdWhenLoadingPage page
+            cmdWhenLoadingPage page flags.apiRoot
     in
-    ( Model key url page, cmd )
+    ( { currentUrl = url
+      , currentPage = page
+      , key = key
+      , apiRoot = flags.apiRoot
+      }
+    , cmd
+    )
 
 
 type Msg
@@ -166,9 +173,9 @@ update msg model =
                     pageFromUrl url
 
                 cmd =
-                    cmdWhenLoadingPage newPage
+                    cmdWhenLoadingPage newPage model.apiRoot
             in
-            ( { model | url = url, currentPage = newPage }
+            ( { model | currentUrl = url, currentPage = newPage }
             , cmd
             )
 
