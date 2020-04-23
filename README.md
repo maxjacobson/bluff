@@ -22,6 +22,13 @@ Boot:
 rails s
 ```
 
+Deploy:
+
+```
+git remote add heroku https://git.heroku.com/bluff-api.git
+bin/deploy-api
+```
+
 ### ./web
 
 The frontend is an Elm app.

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -ex
+
+echo "===> Deploying api"
+
+blob=`git subtree split --prefix api master`
+git push heroku "$blob":refs/heads/master --force
+
+echo "===> Done"
