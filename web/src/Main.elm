@@ -5,6 +5,7 @@ import Browser.Navigation as Nav
 import Html exposing (div, form, h1, input, p, text)
 import Html.Attributes exposing (attribute)
 import Html.Events exposing (onInput, onSubmit)
+import Http
 import Url
 
 
@@ -42,8 +43,8 @@ type alias Flags =
     ()
 
 
-pageFromURL : Url.Url -> Page
-pageFromURL url =
+pageFromUrl : Url.Url -> Page
+pageFromUrl url =
     case url.path of
         "/" ->
             HomePage
@@ -69,7 +70,25 @@ gameIDFromUrl url =
 
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init _ url key =
-    ( Model key url (gameIDFromUrl url) (pageFromURL url), Cmd.none )
+    let
+        page =
+            pageFromUrl url
+
+        cmd =
+            case page of
+                GamePage gameID ->
+                    Http.get
+                        { url = "http://localhost:3000/games/" ++ gameID ++ ".json"
+                        , expect = Http.expectString GotGameAsString
+                        }
+
+                HomePage ->
+                    Cmd.none
+
+                NotFound ->
+                    Cmd.none
+    in
+    ( Model key url Nothing page, cmd )
 
 
 type Msg
@@ -77,6 +96,7 @@ type Msg
     | UpdatedGameID String
     | SubmittedGoToGame
     | UrlChanged Url.Url
+    | GotGameAsString (Result Http.Error String)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -104,11 +124,18 @@ update msg model =
         UrlChanged url ->
             let
                 newPage =
-                    pageFromURL url
+                    pageFromUrl url
             in
             ( { model | url = url, currentPage = newPage }
             , Cmd.none
             )
+
+        GotGameAsString result ->
+            let
+                _ =
+                    Debug.log "GotGameAsString result " result
+            in
+            ( model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
