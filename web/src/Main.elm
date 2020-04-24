@@ -27,6 +27,7 @@ type alias Model =
     , currentPage : Page
     , key : Nav.Key
     , apiRoot : String
+    , humanUuid : String
     }
 
 
@@ -49,7 +50,9 @@ type Page
 
 
 type alias Flags =
-    { apiRoot : String }
+    { apiRoot : String
+    , humanUuid : String
+    }
 
 
 pageFromUrl : Url.Url -> Page
@@ -104,13 +107,18 @@ titleForPage page =
             "About - Bluff"
 
 
-cmdWhenLoadingPage : Page -> String -> Cmd Msg
-cmdWhenLoadingPage page apiRoot =
+cmdWhenLoadingPage : Page -> String -> String -> Cmd Msg
+cmdWhenLoadingPage page apiRoot humanUuid =
     case page of
         GamePage gamePageModel ->
-            Http.get
+            Http.request
                 { url = apiRoot ++ "/games/" ++ gamePageModel.gameIdFromUrl ++ ".json"
                 , expect = Http.expectJson GotGameData gameDataDecoder
+                , headers = [ Http.header "X-Human-UUID" humanUuid ]
+                , tracker = Nothing
+                , timeout = Nothing
+                , method = "GET"
+                , body = Http.emptyBody
                 }
 
         HomePage _ ->
@@ -130,12 +138,13 @@ init flags url key =
             pageFromUrl url
 
         cmd =
-            cmdWhenLoadingPage page flags.apiRoot
+            cmdWhenLoadingPage page flags.apiRoot flags.humanUuid
     in
     ( { currentUrl = url
       , currentPage = page
       , key = key
       , apiRoot = flags.apiRoot
+      , humanUuid = flags.humanUuid
       }
     , cmd
     )
@@ -196,7 +205,7 @@ update msg model =
                     pageFromUrl url
 
                 cmd =
-                    cmdWhenLoadingPage newPage model.apiRoot
+                    cmdWhenLoadingPage newPage model.apiRoot model.humanUuid
             in
             ( { model | currentUrl = url, currentPage = newPage }
             , cmd
