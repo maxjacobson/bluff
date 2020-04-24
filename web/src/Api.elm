@@ -1,4 +1,4 @@
-module Api exposing (availableGameIdUrl, gameUrl, get, joinGameUrl, post, profileUrl)
+module Api exposing (availableGameIdUrl, gameUrl, get, joinGameUrl, post, profileUrl, put)
 
 import Http
 import Url.Builder
@@ -41,6 +41,27 @@ get request =
         , timeout = Nothing
         , method = "GET"
         , body = Http.emptyBody
+        }
+
+
+type alias PutRequest m =
+    { url : String
+    , uuid : String
+    , expect : Http.Expect m
+    , body : Http.Body
+    }
+
+
+put : PutRequest m -> Cmd m
+put request =
+    Http.request
+        { url = request.url
+        , expect = request.expect
+        , headers = humanityRecognitionHeaders request.uuid
+        , tracker = Nothing
+        , timeout = Nothing
+        , method = "PUT"
+        , body = request.body
         }
 
 

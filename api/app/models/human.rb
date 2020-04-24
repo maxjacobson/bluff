@@ -5,6 +5,8 @@ class Human < ApplicationRecord
   has_many :attendances, class_name: 'GameAttendance'
   has_many :games, through: :attendances
 
+  validates :nickname, presence: true
+
   # Even if we don't know who they are, we're going to act like we do
   def self.recognize(uuid)
     return if uuid.blank?

@@ -1,6 +1,6 @@
 module Main exposing (main)
 
-import Api exposing (availableGameIdUrl, gameUrl, get, joinGameUrl, post, profileUrl)
+import Api exposing (..)
 import Browser
 import Browser.Navigation as Nav
 import Html exposing (..)
@@ -8,6 +8,7 @@ import Html.Attributes exposing (attribute, disabled, href, target, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import Json.Decode as D exposing (Decoder, field, string)
+import Json.Encode as E
 import Time
 import Url
 import Url.Builder
@@ -145,7 +146,13 @@ update msg model =
                         ProfilePage profilePageModel ->
                             case result of
                                 Ok response ->
-                                    ProfilePage { profilePageModel | profileResponse = SuccessfullyRequested response }
+                                    ProfilePage
+                                        { profilePageModel
+                                            | profileResponse = SuccessfullyRequested response
+                                            , newNickname = response.human.nickname
+                                            , currentlySavingNickname = False
+                                            , editingNickname = False
+                                        }
 
                                 Err e ->
                                     ProfilePage { profilePageModel | profileResponse = FailedToRequest e }
@@ -157,6 +164,68 @@ update msg model =
                     { model | currentPage = newPage }
             in
             ( newModel, Cmd.none )
+
+        MakeNicknameEditable ->
+            let
+                newPage =
+                    case model.currentPage of
+                        ProfilePage profilePageModel ->
+                            ProfilePage { profilePageModel | editingNickname = True }
+
+                        anything ->
+                            anything
+
+                newModel =
+                    { model | currentPage = newPage }
+            in
+            ( newModel, Cmd.none )
+
+        UpdatedNewNickname newNickname ->
+            let
+                newPage =
+                    case model.currentPage of
+                        ProfilePage profilePageModel ->
+                            ProfilePage { profilePageModel | newNickname = newNickname }
+
+                        anything ->
+                            anything
+
+                newModel =
+                    { model | currentPage = newPage }
+            in
+            ( newModel, Cmd.none )
+
+        SaveNewNickname ->
+            case model.currentPage of
+                ProfilePage profilePageModel ->
+                    let
+                        newPage =
+                            ProfilePage { profilePageModel | currentlySavingNickname = True }
+
+                        newModel =
+                            { model | currentPage = newPage }
+
+                        newCmd =
+                            put
+                                { url = profileUrl model.flags.apiRoot
+                                , expect = Http.expectJson GotProfile profileResponseDecoder
+                                , uuid = model.flags.humanUuid
+                                , body =
+                                    Http.jsonBody
+                                        (E.object
+                                            [ ( "profile"
+                                              , E.object
+                                                    [ ( "nickname", E.string profilePageModel.newNickname )
+                                                    ]
+                                              )
+                                            ]
+                                        )
+                                }
+                    in
+                    ( newModel, newCmd )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 
@@ -183,6 +252,9 @@ type Msg
     | GotProfile (Result Http.Error ProfileResponse)
     | Tick Time.Posix
     | HumanWantsIn
+    | MakeNicknameEditable
+    | UpdatedNewNickname String
+    | SaveNewNickname
 
 
 
@@ -222,6 +294,9 @@ type alias HomePageModel =
 
 type alias ProfilePageModel =
     { profileResponse : WebData ProfileResponse Http.Error
+    , editingNickname : Bool
+    , newNickname : String
+    , currentlySavingNickname : Bool
     }
 
 
@@ -378,7 +453,11 @@ pageFromUrl url =
 
         "/profile" ->
             ProfilePage
-                { profileResponse = WaitingForResponse }
+                { profileResponse = WaitingForResponse
+                , newNickname = ""
+                , editingNickname = False
+                , currentlySavingNickname = False
+                }
 
         _ ->
             case gameIdFromUrl url of
@@ -609,9 +688,34 @@ view model =
                             SuccessfullyRequested response ->
                                 div []
                                     [ p []
-                                        [ text "Bluff profiles are ephemeral. When you showed up, I gave you a nickname: "
-                                        , strong [] [ text response.human.nickname ]
-                                        , text ". I hope you like it. I might let you change your nickname one day. "
+                                        [ text "Bluff profiles are ephemeral." ]
+                                    , h3 [] [ text "Your nickname" ]
+                                    , p []
+                                        [ if profilePageModel.editingNickname then
+                                            form [ onSubmit SaveNewNickname ]
+                                                [ input
+                                                    [ attribute "type" "text"
+                                                    , attribute "placeholder" "Your nickname"
+                                                    , onInput UpdatedNewNickname
+                                                    , value profilePageModel.newNickname
+                                                    , disabled profilePageModel.currentlySavingNickname
+                                                    ]
+                                                    []
+                                                , input
+                                                    [ attribute "type" "submit"
+                                                    , attribute "value" "Save"
+                                                    , disabled (String.isEmpty profilePageModel.newNickname || profilePageModel.currentlySavingNickname)
+                                                    ]
+                                                    []
+                                                ]
+
+                                          else
+                                            span []
+                                                [ strong [] [ text response.human.nickname ]
+                                                , text " "
+                                                , button [ onClick MakeNicknameEditable ] [ text "Edit" ]
+                                                , text "."
+                                                ]
                                         ]
                                     , case List.length response.games of
                                         0 ->
