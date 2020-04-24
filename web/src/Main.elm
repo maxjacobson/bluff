@@ -1,15 +1,16 @@
 module Main exposing (main)
 
-import Api exposing (availableGameIdUrl, gameUrl, get, joinGameUrl, post)
+import Api exposing (availableGameIdUrl, gameUrl, get, joinGameUrl, post, profileUrl)
 import Browser
 import Browser.Navigation as Nav
-import Html exposing (a, button, div, footer, form, h1, input, p, span, strong, text)
+import Html exposing (..)
 import Html.Attributes exposing (attribute, disabled, href, target, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import Json.Decode as D exposing (Decoder, field, string)
 import Time
 import Url
+import Url.Builder
 
 
 
@@ -53,7 +54,7 @@ update msg model =
         SubmittedGoToGame ->
             case model.currentPage of
                 HomePage homePageModel ->
-                    ( model, Nav.pushUrl model.key ("/" ++ homePageModel.gameId) )
+                    ( model, Nav.pushUrl model.key (pathForGameId homePageModel.gameId) )
 
                 _ ->
                     ( model, Cmd.none )
@@ -137,6 +138,26 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        GotProfile result ->
+            let
+                newPage =
+                    case model.currentPage of
+                        ProfilePage profilePageModel ->
+                            case result of
+                                Ok response ->
+                                    ProfilePage { profilePageModel | profileResponse = SuccessfullyRequested response }
+
+                                Err e ->
+                                    ProfilePage { profilePageModel | profileResponse = FailedToRequest e }
+
+                        anything ->
+                            anything
+
+                newModel =
+                    { model | currentPage = newPage }
+            in
+            ( newModel, Cmd.none )
+
 
 
 ---- Flags: the data index.js passes in on boot
@@ -159,6 +180,7 @@ type Msg
     | UrlChanged Url.Url
     | GotGameData (Result Http.Error GameResponse)
     | GotAvailableGameId (Result Http.Error AvailableGameIdResponse)
+    | GotProfile (Result Http.Error ProfileResponse)
     | Tick Time.Posix
     | HumanWantsIn
 
@@ -183,11 +205,23 @@ type Page
     = HomePage HomePageModel
     | GamePage GamePageModel
     | AboutPage
+    | ProfilePage ProfilePageModel
     | NotFound
+
+
+type WebData msg error
+    = WaitingForResponse
+    | SuccessfullyRequested msg
+    | FailedToRequest error
 
 
 type alias HomePageModel =
     { gameId : String
+    }
+
+
+type alias ProfilePageModel =
+    { profileResponse : WebData ProfileResponse Http.Error
     }
 
 
@@ -203,12 +237,18 @@ type alias GamePageModel =
 
 type alias GameResponse =
     { gameData : GameData
-    , human : HumanData
+    , human : HumanGameData
     }
 
 
 type alias AvailableGameIdResponse =
     { gameId : String
+    }
+
+
+type alias ProfileResponse =
+    { human : HumanData
+    , games : List GameData
     }
 
 
@@ -226,11 +266,15 @@ type GameStatus
     | Complete
 
 
-type alias HumanData =
+type alias HumanGameData =
     { nickname : String
     , heartbeatAt : Time.Posix
     , role : Role
     }
+
+
+type alias HumanData =
+    { nickname : String }
 
 
 type Role
@@ -284,12 +328,18 @@ gameStatusDecoder status =
         D.fail ("Unknown status: " ++ status)
 
 
-humanDataDecoder : Decoder HumanData
-humanDataDecoder =
-    D.map3 HumanData
+humanGameDataDecoder : Decoder HumanGameData
+humanGameDataDecoder =
+    D.map3 HumanGameData
         (D.field "nickname" D.string)
         (D.field "heartbeat_at" D.int |> D.andThen posixDecoder)
         (D.field "role" D.string |> D.andThen roleDecoder)
+
+
+humanDataDecoder : Decoder HumanData
+humanDataDecoder =
+    D.map HumanData
+        (D.field "nickname" D.string)
 
 
 availableGameIdResponseDecoder : Decoder AvailableGameIdResponse
@@ -302,11 +352,19 @@ gameResponseDecoder : Decoder GameResponse
 gameResponseDecoder =
     D.map2 GameResponse
         (D.field "data" gameDataDecoder)
-        (D.at [ "meta", "human" ] humanDataDecoder)
+        (D.at [ "meta", "human" ] humanGameDataDecoder)
 
 
+gamesResponseDecoder : Decoder (List GameData)
+gamesResponseDecoder =
+    D.list gameDataDecoder
 
----- application helpers
+
+profileResponseDecoder : Decoder ProfileResponse
+profileResponseDecoder =
+    D.map2 ProfileResponse
+        (D.field "data" humanDataDecoder)
+        (D.at [ "data", "games" ] gamesResponseDecoder)
 
 
 pageFromUrl : Url.Url -> Page
@@ -317,6 +375,10 @@ pageFromUrl url =
 
         "/about" ->
             AboutPage
+
+        "/profile" ->
+            ProfilePage
+                { profileResponse = WaitingForResponse }
 
         _ ->
             case gameIdFromUrl url of
@@ -335,6 +397,11 @@ gameIdFromUrl url =
 
         anything ->
             Just anything
+
+
+pathForGameId : String -> String
+pathForGameId identifier =
+    Url.Builder.absolute [ identifier ] []
 
 
 cmdWhenLoadingPage : Page -> Flags -> Cmd Msg
@@ -359,6 +426,13 @@ cmdWhenLoadingPage page flags =
 
         AboutPage ->
             Cmd.none
+
+        ProfilePage _ ->
+            get
+                { url = profileUrl flags.apiRoot
+                , expect = Http.expectJson GotProfile profileResponseDecoder
+                , uuid = flags.humanUuid
+                }
 
 
 humanJoinsGameCmd : GamePageModel -> Flags -> Cmd Msg
@@ -465,6 +539,9 @@ titleForPage page =
         AboutPage ->
             "About - Bluff"
 
+        ProfilePage _ ->
+            "Profile - Bluff"
+
 
 viewHeader : Page -> Html.Html Msg
 viewHeader page =
@@ -479,7 +556,10 @@ viewHeader page =
 viewFooter : Html.Html Msg
 viewFooter =
     footer []
-        [ p [] [ a [ href "/about" ] [ text "About" ] ]
+        [ ul []
+            [ li [] [ a [ href "/about" ] [ text "About" ] ]
+            , li [] [ a [ href "/profile" ] [ text "Profile" ] ]
+            ]
         ]
 
 
@@ -515,6 +595,43 @@ view model =
                         , p []
                             [ a [ href "https://github.com/maxjacobson/bluff", target "_blank" ] [ text "Source code." ]
                             ]
+                        ]
+
+                ProfilePage profilePageModel ->
+                    div []
+                        [ h2 []
+                            [ text "Profile"
+                            ]
+                        , case profilePageModel.profileResponse of
+                            WaitingForResponse ->
+                                p [] [ text "Loading.." ]
+
+                            SuccessfullyRequested response ->
+                                div []
+                                    [ p []
+                                        [ text "Bluff profiles are ephemeral. When you showed up, I gave you a nickname: "
+                                        , strong [] [ text response.human.nickname ]
+                                        , text ". I hope you like it. I might let you change your nickname one day. "
+                                        ]
+                                    , case List.length response.games of
+                                        0 ->
+                                            text ""
+
+                                        _ ->
+                                            div []
+                                                [ h3 [] [ text "Your games" ]
+                                                , ol []
+                                                    (List.map
+                                                        (\game ->
+                                                            li [] [ a [ href (pathForGameId game.identifier) ] [ text game.identifier ] ]
+                                                        )
+                                                        response.games
+                                                    )
+                                                ]
+                                    ]
+
+                            FailedToRequest _ ->
+                                p [] [ text "Whoops, couldn't load your profile. Look, all I can say is I'm sorry." ]
                         ]
 
                 HomePage homePageModel ->

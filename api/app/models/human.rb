@@ -2,6 +2,9 @@
 
 # A human who visited the site, and may or may not have played a game
 class Human < ApplicationRecord
+  has_many :attendances, class_name: 'GameAttendance'
+  has_many :games, through: :attendances
+
   # Even if we don't know who they are, we're going to act like we do
   def self.recognize(uuid)
     return if uuid.blank?
