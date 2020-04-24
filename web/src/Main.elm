@@ -91,10 +91,26 @@ posixDecoder millis =
 
 gameDataDecoder : Decoder GameData
 gameDataDecoder =
-    D.map3 GameData
+    D.map4 GameData
         (D.field "id" D.string)
         (D.field "last_action_at" D.int |> D.andThen posixDecoder)
         (D.field "spectators_count" D.int)
+        (D.field "status" D.string |> D.andThen gameStatusDecoder)
+
+
+gameStatusDecoder : String -> Decoder GameStatus
+gameStatusDecoder status =
+    if status == "pending" then
+        D.succeed Pending
+
+    else if status == "playing" then
+        D.succeed Playing
+
+    else if status == "complete" then
+        D.succeed Complete
+
+    else
+        D.fail ("Unknown status: " ++ status)
 
 
 humanDataDecoder : Decoder HumanData
@@ -256,7 +272,14 @@ type alias GameData =
     { identifier : String
     , lastActionAt : Time.Posix
     , spectatorCount : Int
+    , status : GameStatus
     }
+
+
+type GameStatus
+    = Pending
+    | Playing
+    | Complete
 
 
 type alias HumanData =
@@ -383,6 +406,19 @@ viewFooter =
         ]
 
 
+viewStatus : GameStatus -> Html.Html Msg
+viewStatus status =
+    case status of
+        Pending ->
+            text "Pending"
+
+        Playing ->
+            text "Playing"
+
+        Complete ->
+            text "Complete"
+
+
 view : Model -> Browser.Document Msg
 view model =
     { title = titleForPage model.currentPage
@@ -428,6 +464,11 @@ view model =
                                             ]
                                         ]
                                     , text ("! Spectators count is " ++ String.fromInt gameResponse.gameData.spectatorCount ++ ".")
+                                    , span []
+                                        [ text "Game is currently "
+                                        , viewStatus gameResponse.gameData.status
+                                        , text "."
+                                        ]
                                     ]
 
                             Nothing ->
