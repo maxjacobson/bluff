@@ -5,11 +5,7 @@
 class GameAttendance < ApplicationRecord
   belongs_to :human
   belongs_to :game
-
-  enum role: {
-    viewer: 'viewer',
-    player: 'player'
-  }
+  has_many :actions, class_name: 'GameAction', foreign_key: :attendance_id
 
   before_create -> { self.heartbeat_at = Time.zone.now }
 

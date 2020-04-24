@@ -17,6 +17,10 @@ Metrics/BlockLength:
   ExcludedMethods:
     - describe
 
+Metrics/MethodLength:
+  ExcludedMethods:
+    - up
+
 Style/ExponentialNotation:
   Enabled: true
 

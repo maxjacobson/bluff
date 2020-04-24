@@ -4,14 +4,13 @@
 class Game < ApplicationRecord
   has_many :attendances, class_name: 'GameAttendance'
   has_many :humans, through: :attendances
+  has_many :actions, through: :attendances, source: :actions
 
   enum status: {
     pending: 'pending',
     playing: 'playing',
     complete: 'complete'
   }
-
-  before_create -> { self.last_action_at = Time.zone.now }
 
   scope :newest_to_oldest, -> { order(created_at: :desc) }
 
@@ -31,5 +30,13 @@ class Game < ApplicationRecord
     humans
       .where("game_attendances.heartbeat_at > now() - interval '10 minutes'")
       .count
+  end
+
+  def dealer
+    Dealer.new(self)
+  end
+
+  def last_action_at
+    dealer.latest_action_at || created_at
   end
 end

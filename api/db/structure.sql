@@ -10,12 +10,18 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: attendance_role; Type: TYPE; Schema: public; Owner: -
+-- Name: game_action; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.attendance_role AS ENUM (
-    'viewer',
-    'player'
+CREATE TYPE public.game_action AS ENUM (
+    'buy_in',
+    'draw',
+    'ante',
+    'bet',
+    'check',
+    'fold',
+    'resign',
+    'become_dealer'
 );
 
 
@@ -47,6 +53,39 @@ CREATE TABLE public.ar_internal_metadata (
 
 
 --
+-- Name: game_actions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.game_actions (
+    id bigint NOT NULL,
+    attendance_id bigint NOT NULL,
+    action public.game_action NOT NULL,
+    value integer,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: game_actions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.game_actions_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: game_actions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.game_actions_id_seq OWNED BY public.game_actions.id;
+
+
+--
 -- Name: game_attendances; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -56,8 +95,7 @@ CREATE TABLE public.game_attendances (
     game_id bigint NOT NULL,
     heartbeat_at timestamp without time zone NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    role public.attendance_role DEFAULT 'viewer'::public.attendance_role NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -89,7 +127,6 @@ CREATE TABLE public.games (
     identifier character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    last_action_at timestamp without time zone NOT NULL,
     status public.game_status DEFAULT 'pending'::public.game_status NOT NULL
 );
 
@@ -155,6 +192,13 @@ CREATE TABLE public.schema_migrations (
 
 
 --
+-- Name: game_actions id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.game_actions ALTER COLUMN id SET DEFAULT nextval('public.game_actions_id_seq'::regclass);
+
+
+--
 -- Name: game_attendances id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -181,6 +225,14 @@ ALTER TABLE ONLY public.humans ALTER COLUMN id SET DEFAULT nextval('public.human
 
 ALTER TABLE ONLY public.ar_internal_metadata
     ADD CONSTRAINT ar_internal_metadata_pkey PRIMARY KEY (key);
+
+
+--
+-- Name: game_actions game_actions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.game_actions
+    ADD CONSTRAINT game_actions_pkey PRIMARY KEY (id);
 
 
 --
@@ -213,6 +265,13 @@ ALTER TABLE ONLY public.humans
 
 ALTER TABLE ONLY public.schema_migrations
     ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: index_game_actions_on_attendance_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_game_actions_on_attendance_id ON public.game_actions USING btree (attendance_id);
 
 
 --
@@ -251,6 +310,14 @@ CREATE UNIQUE INDEX index_humans_on_uuid ON public.humans USING btree (uuid);
 
 
 --
+-- Name: game_actions fk_rails_4bfe0a88b7; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.game_actions
+    ADD CONSTRAINT fk_rails_4bfe0a88b7 FOREIGN KEY (attendance_id) REFERENCES public.game_attendances(id);
+
+
+--
 -- Name: game_attendances fk_rails_6f1ca5105c; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -278,6 +345,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20200424043535'),
 ('20200424052330'),
 ('20200424080215'),
-('20200424163412');
+('20200424163412'),
+('20200424213458'),
+('20200424232610'),
+('20200424233710');
 
 
