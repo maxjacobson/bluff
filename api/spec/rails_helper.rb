@@ -6,6 +6,7 @@ ENV['RAILS_ENV'] ||= 'test'
 
 require File.expand_path('../config/environment', __dir__)
 require Rails.root.join('spec/support/factories')
+require Rails.root.join('spec/support/json_expectation_helper')
 
 if Rails.env.production?
   abort('The Rails environment is running in production mode!')

@@ -13,6 +13,8 @@ class Game < ApplicationRecord
 
   before_create -> { self.last_action_at = Time.zone.now }
 
+  scope :newest_to_oldest, -> { order(created_at: :desc) }
+
   def self.available_identifier
     count = 0
     loop do
