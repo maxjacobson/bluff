@@ -331,6 +331,7 @@ type alias GameData =
     { identifier : String
     , lastActionAt : Time.Posix
     , spectatorCount : Int
+    , totalChipsCount : Int
     , status : GameStatus
     }
 
@@ -369,10 +370,11 @@ posixDecoder millis =
 
 gameDataDecoder : Decoder GameData
 gameDataDecoder =
-    D.map4 GameData
+    D.map5 GameData
         (D.field "id" D.string)
         (D.field "last_action_at" D.int |> D.andThen posixDecoder)
         (D.field "spectators_count" D.int)
+        (D.field "total_chips_count" D.int)
         (D.field "status" D.string |> D.andThen gameStatusDecoder)
 
 
@@ -833,6 +835,7 @@ view model =
                                                             [ p [] [ text "You're in!" ]
                                                             , p []
                                                                 [ img [ src "/icons/piggy-bank.svg" ] []
+                                                                , text ("Chips on table: " ++ String.fromInt gameResponse.gameData.totalChipsCount ++ " chips")
                                                                 ]
                                                             ]
                                                 ]
