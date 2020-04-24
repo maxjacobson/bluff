@@ -654,8 +654,8 @@ viewFooter : Html.Html Msg
 viewFooter =
     footer []
         [ ul []
-            [ li [] [ a [ href "/about" ] [ text "About" ] ]
-            , li [] [ a [ href "/profile" ] [ text "Profile" ] ]
+            [ li [] [ a [ href "/profile" ] [ text "Profile" ] ]
+            , li [] [ a [ href "/about" ] [ text "About" ] ]
             ]
         ]
 
