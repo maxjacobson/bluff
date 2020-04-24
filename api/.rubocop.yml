@@ -12,6 +12,10 @@ Lint/RaiseException:
 Lint/StructNewOverride:
   Enabled: true
 
+Metrics/BlockLength:
+  ExcludedMethods:
+    - describe
+
 Style/ExponentialNotation:
   Enabled: true
 
