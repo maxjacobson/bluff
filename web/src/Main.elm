@@ -368,7 +368,9 @@ view model =
                 GamePage gamePageModel ->
                     div []
                         [ p []
-                            [ text ("You are on the game page for game ID: " ++ gamePageModel.gameIdFromUrl)
+                            [ text "You are on the game page for game ID: "
+                            , strong [] [ text gamePageModel.gameIdFromUrl ]
+                            , text "."
                             ]
                         , case gamePageModel.gameResponse of
                             Just gameResponse ->
