@@ -6,6 +6,12 @@ RSpec.describe GamesController do
   render_views
 
   describe '#show' do
+    let(:uuid) { 'bars-of-gold' }
+
+    before do
+      request.headers['X-Human-UUID'] = uuid
+    end
+
     context 'when the game does not yet exist' do
       it 'creates the game' do
         get :show, params: { id: 'my-great-game' }, format: :json
@@ -30,37 +36,29 @@ RSpec.describe GamesController do
       end
     end
 
-    context 'when a human UUID is provided' do
-      let(:uuid) { 'bars-of-gold' }
+    context 'when the human does not yet exist' do
+      it 'creates the human' do
+        expect do
+          get :show, params: { id: 'my-great-game' }, format: :json
+        end.to change { Human.count }.from(0).to(1)
 
+        expect(response).to be_ok
+        expect(Human.first.uuid).to eq(uuid)
+      end
+    end
+
+    context 'when the human already exists' do
       before do
-        request.headers['X-Human-UUID'] = uuid
+        Human.create!(uuid: uuid, nickname: 'Jane')
       end
 
-      context 'when the human does not yet exist' do
-        it 'creates the human' do
-          expect do
-            get :show, params: { id: 'my-great-game' }, format: :json
-          end.to change { Human.count }.from(0).to(1)
+      it 'does not create a duplicate human' do
+        expect do
+          get :show, params: { id: 'my-great-game' }, format: :json
+        end.to_not(change { Human.count })
 
-          expect(response).to be_ok
-          expect(Human.first.uuid).to eq(uuid)
-        end
-      end
-
-      context 'when the human already exists' do
-        before do
-          Human.create!(uuid: uuid, nickname: 'Jane')
-        end
-
-        it 'does not create a duplicate human' do
-          expect do
-            get :show, params: { id: 'my-great-game' }, format: :json
-          end.to_not(change { Human.count })
-
-          expect(response).to be_ok
-          expect(Human.first.uuid).to eq(uuid)
-        end
+        expect(response).to be_ok
+        expect(Human.first.uuid).to eq(uuid)
       end
     end
   end

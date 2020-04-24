@@ -31,4 +31,8 @@ class ApplicationController < ActionController::API
   def verify_authorization_was_checked
     raise AuthorizationNotChecked unless @authorized
   end
+
+  def unauthorized(_exception)
+    render json: {}, status: :unauthorized
+  end
 end
