@@ -4,7 +4,7 @@
 class GamesController < ApplicationController
   def show
     # Anyone can view a game
-    authorize! { true }
+    authorize! { current_human.present? }
 
     @game = Game.create_or_find_by(identifier: params[:id])
 

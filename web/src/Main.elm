@@ -3,7 +3,7 @@ module Main exposing (main)
 import Browser
 import Browser.Navigation as Nav
 import Html exposing (a, div, footer, form, h1, input, p, span, strong, text)
-import Html.Attributes exposing (attribute, disabled, href, target)
+import Html.Attributes exposing (attribute, disabled, href, target, value)
 import Html.Events exposing (onInput, onSubmit)
 import Http
 import Json.Decode as D exposing (Decoder, field, string)
@@ -110,6 +110,17 @@ type alias GameResponse =
     }
 
 
+type alias AvailableGameIdResponse =
+    { gameId : String
+    }
+
+
+availableGameIdResponseDecoder : Decoder AvailableGameIdResponse
+availableGameIdResponseDecoder =
+    D.map AvailableGameIdResponse
+        (D.at [ "data", "id" ] D.string)
+
+
 gameResponseDecoder : Decoder GameResponse
 gameResponseDecoder =
     D.map2 GameResponse
@@ -148,7 +159,15 @@ cmdWhenLoadingPage page apiRoot humanUuid =
                 }
 
         HomePage _ ->
-            Cmd.none
+            Http.request
+                { url = apiRoot ++ "/available-game-id.json"
+                , expect = Http.expectJson GotAvailableGameId availableGameIdResponseDecoder
+                , headers = [ Http.header "X-Human-UUID" humanUuid ]
+                , tracker = Nothing
+                , timeout = Nothing
+                , method = "GET"
+                , body = Http.emptyBody
+                }
 
         NotFound ->
             Cmd.none
@@ -229,6 +248,7 @@ type Msg
     | SubmittedGoToGame
     | UrlChanged Url.Url
     | GotGameData (Result Http.Error GameResponse)
+    | GotAvailableGameId (Result Http.Error AvailableGameIdResponse)
     | Tick Time.Posix
 
 
@@ -309,6 +329,30 @@ update msg model =
             in
             ( newModel, Cmd.none )
 
+        GotAvailableGameId result ->
+            let
+                newPage =
+                    case model.currentPage of
+                        HomePage homePageModel ->
+                            case result of
+                                Ok availableGameIdResponse ->
+                                    if homePageModel.gameId == "" then
+                                        HomePage { homePageModel | gameId = availableGameIdResponse.gameId }
+
+                                    else
+                                        model.currentPage
+
+                                _ ->
+                                    model.currentPage
+
+                        _ ->
+                            model.currentPage
+
+                newModel =
+                    { model | currentPage = newPage }
+            in
+            ( newModel, Cmd.none )
+
         Tick time ->
             let
                 cmd =
@@ -360,7 +404,7 @@ view model =
                     div []
                         [ p [] [ text "Bluff is a poker game for bluffers. Enter your group's game ID to proceed." ]
                         , form [ onSubmit SubmittedGoToGame ]
-                            [ input [ attribute "type" "text", attribute "placeholder" "Your group's game ID", onInput UpdatedGameID ] []
+                            [ input [ attribute "type" "text", attribute "placeholder" "Your group's game ID", onInput UpdatedGameID, value homePageModel.gameId ] []
                             , input [ attribute "type" "submit", attribute "value" "Go", disabled (String.isEmpty homePageModel.gameId) ] []
                             ]
                         ]
