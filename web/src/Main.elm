@@ -37,7 +37,7 @@ type alias HomePageModel =
 
 
 type alias GamePageModel =
-    { gameData : Maybe GameData
+    { gameResponse : Maybe GameResponse
     , gameIdFromUrl : String
     }
 
@@ -91,6 +91,24 @@ gameDataDecoder =
         (D.field "spectators_count" D.int)
 
 
+humanDataDecoder : Decoder HumanData
+humanDataDecoder =
+    D.map HumanData (D.field "nickname" D.string)
+
+
+type alias GameResponse =
+    { gameData : GameData
+    , human : HumanData
+    }
+
+
+gameResponseDecoder : Decoder GameResponse
+gameResponseDecoder =
+    D.map2 GameResponse
+        (D.field "data" gameDataDecoder)
+        (D.at [ "meta", "human" ] humanDataDecoder)
+
+
 titleForPage : Page -> String
 titleForPage page =
     case page of
@@ -113,7 +131,7 @@ cmdWhenLoadingPage page apiRoot humanUuid =
         GamePage gamePageModel ->
             Http.request
                 { url = apiRoot ++ "/games/" ++ gamePageModel.gameIdFromUrl ++ ".json"
-                , expect = Http.expectJson GotGameData gameDataDecoder
+                , expect = Http.expectJson GotGameData gameResponseDecoder
                 , headers = [ Http.header "X-Human-UUID" humanUuid ]
                 , tracker = Nothing
                 , timeout = Nothing
@@ -155,7 +173,7 @@ type Msg
     | UpdatedGameID String
     | SubmittedGoToGame
     | UrlChanged Url.Url
-    | GotGameData (Result Http.Error GameData)
+    | GotGameData (Result Http.Error GameResponse)
 
 
 type alias GameData =
@@ -163,6 +181,10 @@ type alias GameData =
     , playerCount : Int
     , spectatorCount : Int
     }
+
+
+type alias HumanData =
+    { nickname : String }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -217,11 +239,11 @@ update msg model =
                     case model.currentPage of
                         GamePage gamePageModel ->
                             case result of
-                                Ok newGameData ->
-                                    GamePage { gamePageModel | gameData = Just newGameData }
+                                Ok newGameResponse ->
+                                    GamePage { gamePageModel | gameResponse = Just newGameResponse }
 
                                 Err _ ->
-                                    GamePage { gamePageModel | gameData = Nothing }
+                                    GamePage { gamePageModel | gameResponse = Nothing }
 
                         anything ->
                             anything
@@ -285,9 +307,9 @@ view model =
                         [ p []
                             [ text ("You are on the game page for game ID: " ++ gamePageModel.gameIdFromUrl)
                             ]
-                        , case gamePageModel.gameData of
-                            Just gameData ->
-                                p [] [ text ("Players count is " ++ String.fromInt gameData.playerCount) ]
+                        , case gamePageModel.gameResponse of
+                            Just gameResponse ->
+                                p [] [ text ("Welcome, " ++ gameResponse.human.nickname ++ "! Players count is " ++ String.fromInt gameResponse.gameData.playerCount) ]
 
                             Nothing ->
                                 text "Loading gameData"

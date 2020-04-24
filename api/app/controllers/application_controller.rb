@@ -14,6 +14,9 @@ class ApplicationController < ActionController::API
 
   private
 
+  attr_accessor :current_human
+  helper_method :current_human
+
   def authorize!(&block)
     raise NotAuthorized unless block.call
 
@@ -22,7 +25,7 @@ class ApplicationController < ActionController::API
 
   def recognize_human
     uuid = request.headers['X-Human-UUID']
-    @current_human = Human.recognize(uuid)
+    self.current_human = Human.recognize(uuid)
   end
 
   def verify_authorization_was_checked

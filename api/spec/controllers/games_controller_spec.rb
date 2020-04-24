@@ -12,7 +12,7 @@ RSpec.describe GamesController do
 
         expect(response).to be_ok
         game = JSON.parse(response.body)
-        expect(game.fetch('id')).to eq('my-great-game')
+        expect(game.fetch('data').fetch('id')).to eq('my-great-game')
       end
     end
 
@@ -26,7 +26,7 @@ RSpec.describe GamesController do
 
         expect(response).to be_ok
         game = JSON.parse(response.body)
-        expect(game.fetch('id')).to eq('my-so-so-game')
+        expect(game.fetch('data').fetch('id')).to eq('my-so-so-game')
       end
     end
 
