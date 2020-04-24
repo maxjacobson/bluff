@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Browser.Navigation as Nav
-import Html exposing (a, div, footer, form, h1, input, p, text)
+import Html exposing (a, div, footer, form, h1, input, p, span, strong, text)
 import Html.Attributes exposing (attribute, disabled, href, target)
 import Html.Events exposing (onInput, onSubmit)
 import Http
@@ -372,7 +372,17 @@ view model =
                             ]
                         , case gamePageModel.gameResponse of
                             Just gameResponse ->
-                                p [] [ text ("Welcome, " ++ gameResponse.human.nickname ++ "! Spectators count is " ++ String.fromInt gameResponse.gameData.spectatorCount ++ ".") ]
+                                p []
+                                    [ span []
+                                        [ text "Welcome, "
+                                        ]
+                                    , span []
+                                        [ strong []
+                                            [ text gameResponse.human.nickname
+                                            ]
+                                        ]
+                                    , text ("! Spectators count is " ++ String.fromInt gameResponse.gameData.spectatorCount ++ ".")
+                                    ]
 
                             Nothing ->
                                 text "Loading gameData"
