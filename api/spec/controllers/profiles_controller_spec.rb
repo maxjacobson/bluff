@@ -41,7 +41,7 @@ RSpec.describe ProfilesController do
           .to eq([
                    {
                      'id' => game.identifier,
-                     'last_action_at' => game.last_action_at.to_i * 1000,
+                     'last_action_at' => Millis.new(game.last_action_at).to_i,
                      'spectators_count' => 1,
                      'status' => 'pending'
                    }

@@ -8,8 +8,8 @@ json.meta do
   if current_human.present?
     json.human do
       json.nickname current_human.nickname
-      json.heartbeat_at current_human.heartbeat_for(game).to_i * 1000
-      json.role current_human.attendance_role_for(game)
+      json.heartbeat_at Millis.new(current_human.heartbeat_for(game)).to_i
+      json.role game.dealer.role(current_human)
     end
   end
 end

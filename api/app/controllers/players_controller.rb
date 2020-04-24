@@ -7,7 +7,8 @@ class PlayersController < ApplicationController
     authorize! { current_human.present? }
 
     @game = Game.find_by!(identifier: params.require(:game_id))
-    current_human.join_as_player(@game)
+
+    GameAction::BuyIn.new(current_human, @game).record
 
     render status: :created
   end

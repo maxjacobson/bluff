@@ -28,14 +28,4 @@ class Human < ApplicationRecord
   def heartbeat_for(game)
     game.attendances.find_by_human_id!(id).heartbeat_at
   end
-
-  def join_as_player(game)
-    attendance = game.attendances.create_or_find_by!(human_id: id)
-    attendance.player!
-  end
-
-  def attendance_role_for(game)
-    attendance = game.attendances.create_or_find_by!(human_id: id)
-    attendance.role
-  end
 end

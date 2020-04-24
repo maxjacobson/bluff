@@ -6,6 +6,12 @@ module Factories
       identifier: Faker::Creature::Animal.name
     }.merge(attrs))
   end
+
+  def create_human(attrs = {})
+    Human.create!({
+      uuid: SecureRandom.uuid
+    }.merge(attrs))
+  end
 end
 
 RSpec.configure do |config|
