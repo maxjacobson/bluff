@@ -7,5 +7,7 @@ class GamesController < ApplicationController
     authorize! { true }
 
     @game = Game.create_or_find_by(identifier: params[:id])
+
+    current_human&.record_heartbeat(@game)
   end
 end

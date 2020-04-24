@@ -18,4 +18,16 @@ class Human < ApplicationRecord
       [Faker::Hipster.word, Faker::Creature::Animal.name].join(' ').titlecase
     end
   end
+
+  def record_heartbeat(game)
+    if (attendance = game.attendances.find_by_human_id(id)).present?
+      attendance.heartbeat!
+    else
+      game.attendances.create!(human_id: id)
+    end
+  end
+
+  def heartbeat_for(game)
+    game.attendances.find_by_human_id!(id).heartbeat_at
+  end
 end
