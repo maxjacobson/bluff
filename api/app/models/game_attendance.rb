@@ -6,6 +6,11 @@ class GameAttendance < ApplicationRecord
   belongs_to :human
   belongs_to :game
 
+  enum role: {
+    viewer: 'viewer',
+    player: 'player'
+  }
+
   before_create -> { self.heartbeat_at = Time.zone.now }
 
   # Record that the human is still at the game
