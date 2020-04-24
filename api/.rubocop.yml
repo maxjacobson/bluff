@@ -1,6 +1,7 @@
 AllCops:
   Exclude:
-    - db/schema.rb
+    # These should all be auto-generated binstubs. Any custom scripts will live
+    # in ./exe or ../bin
     - bin/*
 
 Layout/SpaceAroundMethodCallOperator:

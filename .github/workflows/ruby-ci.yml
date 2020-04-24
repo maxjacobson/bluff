@@ -12,9 +12,11 @@ jobs:
 
     services:
       postgres:
-        image: postgres:11.5
+        image: postgres:12.2
         ports: ["5432:5432"]
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        env:
+          POSTGRES_PASSWORD: password1234
 
 
     steps:
@@ -36,6 +38,7 @@ jobs:
       env:
         PGHOST: localhost
         PGUSER: postgres
+        PGPASSWORD: password1234
       run: |
         cd api
         bundle exec rails db:setup
@@ -44,6 +47,7 @@ jobs:
       env:
         PGHOST: localhost
         PGUSER: postgres
+        PGPASSWORD: password1234
       run: |
         cd api
         bundle exec rspec        
