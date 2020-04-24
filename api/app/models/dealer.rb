@@ -27,6 +27,16 @@ class Dealer
     end
   end
 
+  def total_chips_count
+    actions.inject(0) do |sum, action|
+      if action.buy_in?
+        sum + action.value
+      else
+        sum
+      end
+    end
+  end
+
   private
 
   attr_reader :game

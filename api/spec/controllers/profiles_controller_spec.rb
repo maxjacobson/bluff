@@ -43,7 +43,8 @@ RSpec.describe ProfilesController do
                      'id' => game.identifier,
                      'last_action_at' => Millis.new(game.last_action_at).to_i,
                      'spectators_count' => 1,
-                     'status' => 'pending'
+                     'status' => 'pending',
+                     'total_chips_count' => 0
                    }
                  ])
       end
