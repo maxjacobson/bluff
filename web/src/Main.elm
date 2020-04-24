@@ -4,7 +4,7 @@ import Api exposing (..)
 import Browser
 import Browser.Navigation as Nav
 import Html exposing (..)
-import Html.Attributes exposing (attribute, disabled, href, target, value)
+import Html.Attributes exposing (attribute, class, disabled, href, src, target, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import Json.Decode as D exposing (Decoder, field, string)
@@ -624,12 +624,30 @@ titleForPage page =
 
 viewHeader : Page -> Html.Html Msg
 viewHeader page =
-    case page of
-        HomePage _ ->
-            h1 [] [ text "Bluff" ]
+    let
+        hyperlink : Bool
+        hyperlink =
+            case page of
+                HomePage _ ->
+                    False
 
-        _ ->
-            h1 [] [ a [ href "/ " ] [ text "Bluff" ] ]
+                _ ->
+                    True
+
+        headerChildren =
+            [ img [ src "/icons/closed-eye.svg" ] []
+            , h1 []
+                [ text "Bluff"
+                ]
+            ]
+    in
+    if hyperlink then
+        a [ href "/" ]
+            [ header [] headerChildren
+            ]
+
+    else
+        header [] headerChildren
 
 
 viewFooter : Html.Html Msg
@@ -668,11 +686,38 @@ view model =
             , case model.currentPage of
                 AboutPage ->
                     div []
-                        [ p []
-                            [ text "It's a game."
+                        [ section []
+                            [ h2 [] [ text "Rules" ]
+                            , p []
+                                [ text "I'm going to add these later, when the game is actually implemented."
+                                ]
                             ]
-                        , p []
-                            [ a [ href "https://github.com/maxjacobson/bluff", target "_blank" ] [ text "Source code." ]
+                        , section []
+                            [ h2 [] [ text "Source code" ]
+                            , p []
+                                [ a [ href "https://github.com/maxjacobson/bluff", target "_blank" ] [ text "It's over here if you want to knock yourself out." ]
+                                ]
+                            ]
+                        , section []
+                            [ h2 [] [ text "Credits" ]
+                            , p []
+                                [ text "These icons are from "
+                                , a [ href "https://www.toicon.com/about" ] [ strong [] [ text "to [icon]" ] ]
+                                , text ":"
+                                ]
+                            , ul [ class "icons-credits" ]
+                                [ li []
+                                    [ a [ href "https://www.toicon.com/icons/avocado_save" ] [ img [ src "/icons/piggy-bank.svg" ] [] ]
+                                    ]
+                                , li []
+                                    [ a [ href "https://www.toicon.com/icons/hatch_hide" ] [ img [ src "/icons/closed-eye.svg" ] [] ]
+                                    ]
+                                ]
+                            , p []
+                                [ text "This is my first time using "
+                                , strong [] [ text "to [icon]" ]
+                                , text ". It didn't have what I was looking for (an icon of some poker chips) but I liked what it had, better."
+                                ]
                             ]
                         ]
 
@@ -784,7 +829,12 @@ view model =
                                                             ]
 
                                                     Player ->
-                                                        text "You're in :)"
+                                                        div []
+                                                            [ p [] [ text "You're in!" ]
+                                                            , p []
+                                                                [ img [ src "/icons/piggy-bank.svg" ] []
+                                                                ]
+                                                            ]
                                                 ]
 
                                         Playing ->

@@ -27,11 +27,25 @@ h1 {
 }
 
 img {
-  margin: 20px 0;
   max-width: 200px;
 }
 
 footer {
   border-top: 1px dashed black;
   margin-top: 20px;
+}
+
+.icons-credits img {
+  width: 50px;
+}
+
+header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+header img {
+  height: 50px;
+  margin-right: 10px;
 }
