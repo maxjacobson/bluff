@@ -7,6 +7,7 @@ import Html.Attributes exposing (attribute, disabled, href, target)
 import Html.Events exposing (onInput, onSubmit)
 import Http
 import Json.Decode as D exposing (Decoder, field, string)
+import Time
 import Url
 
 
@@ -83,17 +84,24 @@ gameIdFromUrl url =
             Just anything
 
 
+posixDecoder : Int -> Decoder Time.Posix
+posixDecoder millis =
+    D.succeed (Time.millisToPosix millis)
+
+
 gameDataDecoder : Decoder GameData
 gameDataDecoder =
     D.map3 GameData
         (D.field "id" D.string)
-        (D.field "players_count" D.int)
+        (D.field "last_action_at" D.int |> D.andThen posixDecoder)
         (D.field "spectators_count" D.int)
 
 
 humanDataDecoder : Decoder HumanData
 humanDataDecoder =
-    D.map HumanData (D.field "nickname" D.string)
+    D.map2 HumanData
+        (D.field "nickname" D.string)
+        (D.field "heartbeat_at" D.int |> D.andThen posixDecoder)
 
 
 type alias GameResponse =
@@ -149,6 +157,53 @@ cmdWhenLoadingPage page apiRoot humanUuid =
             Cmd.none
 
 
+fewerThanMinutesPassedBetween : Int -> Time.Posix -> Time.Posix -> Bool
+fewerThanMinutesPassedBetween minutes a b =
+    let
+        actualDuration =
+            abs (Time.posixToMillis a - Time.posixToMillis b)
+    in
+    actualDuration <= minutes * 60 * 1000
+
+
+greaterThanMinutesPassedBetween : Int -> Time.Posix -> Time.Posix -> Bool
+greaterThanMinutesPassedBetween minutes a b =
+    not (fewerThanMinutesPassedBetween minutes a b)
+
+
+pollingCmd : Page -> String -> String -> Time.Posix -> Cmd Msg
+pollingCmd page apiRoot humanUuid currentTime =
+    let
+        cmd =
+            case page of
+                GamePage gamePageModel ->
+                    case gamePageModel.gameResponse of
+                        Just gameResponse ->
+                            if fewerThanMinutesPassedBetween 5 gameResponse.gameData.lastActionAt currentTime then
+                                -- Keep polling, because the game is active!
+                                cmdWhenLoadingPage page
+                                    apiRoot
+                                    humanUuid
+
+                            else if greaterThanMinutesPassedBetween 2 gameResponse.human.heartbeatAt currentTime then
+                                -- Keep polling, because we haven't checked in a while
+                                cmdWhenLoadingPage page
+                                    apiRoot
+                                    humanUuid
+
+                            else
+                                -- Stop polling
+                                Cmd.none
+
+                        Nothing ->
+                            Cmd.none
+
+                _ ->
+                    Cmd.none
+    in
+    cmd
+
+
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
@@ -174,17 +229,18 @@ type Msg
     | SubmittedGoToGame
     | UrlChanged Url.Url
     | GotGameData (Result Http.Error GameResponse)
+    | Tick Time.Posix
 
 
 type alias GameData =
     { identifier : String
-    , playerCount : Int
+    , lastActionAt : Time.Posix
     , spectatorCount : Int
     }
 
 
 type alias HumanData =
-    { nickname : String }
+    { nickname : String, heartbeatAt : Time.Posix }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -253,10 +309,17 @@ update msg model =
             in
             ( newModel, Cmd.none )
 
+        Tick time ->
+            let
+                cmd =
+                    pollingCmd model.currentPage model.apiRoot model.humanUuid time
+            in
+            ( model, cmd )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Time.every 5000 Tick
 
 
 viewHeader : Page -> Html.Html Msg
@@ -309,7 +372,7 @@ view model =
                             ]
                         , case gamePageModel.gameResponse of
                             Just gameResponse ->
-                                p [] [ text ("Welcome, " ++ gameResponse.human.nickname ++ "! Players count is " ++ String.fromInt gameResponse.gameData.playerCount) ]
+                                p [] [ text ("Welcome, " ++ gameResponse.human.nickname ++ "! Spectators count is " ++ String.fromInt gameResponse.gameData.spectatorCount ++ ".") ]
 
                             Nothing ->
                                 text "Loading gameData"
