@@ -5,6 +5,12 @@ class Game < ApplicationRecord
   has_many :attendances, class_name: 'GameAttendance'
   has_many :humans, through: :attendances
 
+  enum status: {
+    pending: 'pending',
+    playing: 'playing',
+    complete: 'complete'
+  }
+
   before_create -> { self.last_action_at = Time.zone.now }
 
   def self.available_identifier

@@ -19,6 +19,7 @@ RSpec.describe GamesController do
         expect(response).to be_ok
         game = JSON.parse(response.body)
         expect(game.fetch('data').fetch('id')).to eq('my-great-game')
+        expect(game.fetch('data').fetch('status')).to eq('pending')
       end
     end
 
