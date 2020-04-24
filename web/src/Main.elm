@@ -227,7 +227,10 @@ type GameStatus
 
 
 type alias HumanData =
-    { nickname : String, heartbeatAt : Time.Posix, role : Role }
+    { nickname : String
+    , heartbeatAt : Time.Posix
+    , role : Role
+    }
 
 
 type Role
@@ -469,7 +472,7 @@ viewHeader page =
         HomePage _ ->
             h1 [] [ text "Bluff" ]
 
-        anything ->
+        _ ->
             h1 [] [ a [ href "/ " ] [ text "Bluff" ] ]
 
 
