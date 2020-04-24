@@ -1,10 +1,11 @@
 module Main exposing (main)
 
+import Api exposing (availableGameIdUrl, gameUrl, get, joinGameUrl, post)
 import Browser
 import Browser.Navigation as Nav
-import Html exposing (a, div, footer, form, h1, input, p, span, strong, text)
+import Html exposing (a, button, div, footer, form, h1, input, p, span, strong, text)
 import Html.Attributes exposing (attribute, disabled, href, target, value)
-import Html.Events exposing (onInput, onSubmit)
+import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import Json.Decode as D exposing (Decoder, field, string)
 import Time
@@ -71,7 +72,7 @@ update msg model =
                     pageFromUrl url
 
                 cmd =
-                    cmdWhenLoadingPage newPage model.apiRoot model.humanUuid
+                    cmdWhenLoadingPage newPage model.flags
             in
             ( { model | currentUrl = url, currentPage = newPage }
             , cmd
@@ -124,9 +125,17 @@ update msg model =
         Tick time ->
             let
                 cmd =
-                    pollingCmd model.currentPage model.apiRoot model.humanUuid time
+                    pollingCmd model.currentPage model.flags time
             in
             ( model, cmd )
+
+        HumanWantsIn ->
+            case model.currentPage of
+                GamePage gamePageModel ->
+                    ( model, humanJoinsGameCmd gamePageModel model.flags )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 
@@ -151,6 +160,7 @@ type Msg
     | GotGameData (Result Http.Error GameResponse)
     | GotAvailableGameId (Result Http.Error AvailableGameIdResponse)
     | Tick Time.Posix
+    | HumanWantsIn
 
 
 
@@ -161,8 +171,7 @@ type alias Model =
     { currentUrl : Url.Url
     , currentPage : Page
     , key : Nav.Key
-    , apiRoot : String
-    , humanUuid : String
+    , flags : Flags
     }
 
 
@@ -218,7 +227,12 @@ type GameStatus
 
 
 type alias HumanData =
-    { nickname : String, heartbeatAt : Time.Posix }
+    { nickname : String, heartbeatAt : Time.Posix, role : Role }
+
+
+type Role
+    = Viewer
+    | Player
 
 
 
@@ -240,6 +254,18 @@ gameDataDecoder =
         (D.field "status" D.string |> D.andThen gameStatusDecoder)
 
 
+roleDecoder : String -> Decoder Role
+roleDecoder role =
+    if role == "viewer" then
+        D.succeed Viewer
+
+    else if role == "player" then
+        D.succeed Player
+
+    else
+        D.fail ("Unknown role: " ++ role)
+
+
 gameStatusDecoder : String -> Decoder GameStatus
 gameStatusDecoder status =
     if status == "pending" then
@@ -257,9 +283,10 @@ gameStatusDecoder status =
 
 humanDataDecoder : Decoder HumanData
 humanDataDecoder =
-    D.map2 HumanData
+    D.map3 HumanData
         (D.field "nickname" D.string)
         (D.field "heartbeat_at" D.int |> D.andThen posixDecoder)
+        (D.field "role" D.string |> D.andThen roleDecoder)
 
 
 availableGameIdResponseDecoder : Decoder AvailableGameIdResponse
@@ -307,35 +334,42 @@ gameIdFromUrl url =
             Just anything
 
 
-cmdWhenLoadingPage : Page -> String -> String -> Cmd Msg
-cmdWhenLoadingPage page apiRoot humanUuid =
+cmdWhenLoadingPage : Page -> Flags -> Cmd Msg
+cmdWhenLoadingPage page flags =
     case page of
         GamePage gamePageModel ->
-            Http.request
-                { url = apiRoot ++ "/games/" ++ gamePageModel.gameIdFromUrl ++ ".json"
+            get
+                { url = gameUrl flags.apiRoot gamePageModel.gameIdFromUrl
                 , expect = Http.expectJson GotGameData gameResponseDecoder
-                , headers = [ Http.header "X-Human-UUID" humanUuid ]
-                , tracker = Nothing
-                , timeout = Nothing
-                , method = "GET"
-                , body = Http.emptyBody
+                , uuid = flags.humanUuid
                 }
 
         HomePage _ ->
-            Http.request
-                { url = apiRoot ++ "/available-game-id.json"
+            get
+                { url = availableGameIdUrl flags.apiRoot
                 , expect = Http.expectJson GotAvailableGameId availableGameIdResponseDecoder
-                , headers = [ Http.header "X-Human-UUID" humanUuid ]
-                , tracker = Nothing
-                , timeout = Nothing
-                , method = "GET"
-                , body = Http.emptyBody
+                , uuid = flags.humanUuid
                 }
 
         NotFound ->
             Cmd.none
 
         AboutPage ->
+            Cmd.none
+
+
+humanJoinsGameCmd : GamePageModel -> Flags -> Cmd Msg
+humanJoinsGameCmd model flags =
+    case model.gameResponse of
+        Just response ->
+            post
+                { url = joinGameUrl flags.apiRoot response.gameData.identifier
+                , expect = Http.expectJson GotGameData gameResponseDecoder
+                , uuid = flags.humanUuid
+                , body = Http.emptyBody
+                }
+
+        Nothing ->
             Cmd.none
 
 
@@ -353,8 +387,8 @@ greaterThanMinutesPassedBetween minutes a b =
     not (fewerThanMinutesPassedBetween minutes a b)
 
 
-pollingCmd : Page -> String -> String -> Time.Posix -> Cmd Msg
-pollingCmd page apiRoot humanUuid currentTime =
+pollingCmd : Page -> Flags -> Time.Posix -> Cmd Msg
+pollingCmd page flags currentTime =
     let
         cmd =
             case page of
@@ -363,15 +397,11 @@ pollingCmd page apiRoot humanUuid currentTime =
                         Just gameResponse ->
                             if fewerThanMinutesPassedBetween 5 gameResponse.gameData.lastActionAt currentTime then
                                 -- Keep polling, because the game is active!
-                                cmdWhenLoadingPage page
-                                    apiRoot
-                                    humanUuid
+                                cmdWhenLoadingPage page flags
 
                             else if greaterThanMinutesPassedBetween 2 gameResponse.human.heartbeatAt currentTime then
                                 -- Keep polling, because we haven't checked in a while
-                                cmdWhenLoadingPage page
-                                    apiRoot
-                                    humanUuid
+                                cmdWhenLoadingPage page flags
 
                             else
                                 -- Stop polling
@@ -393,13 +423,12 @@ init flags url key =
             pageFromUrl url
 
         cmd =
-            cmdWhenLoadingPage page flags.apiRoot flags.humanUuid
+            cmdWhenLoadingPage page flags
     in
     ( { currentUrl = url
       , currentPage = page
       , key = key
-      , apiRoot = flags.apiRoot
-      , humanUuid = flags.humanUuid
+      , flags = flags
       }
     , cmd
     )
@@ -503,21 +532,42 @@ view model =
                             ]
                         , case gamePageModel.gameResponse of
                             Just gameResponse ->
-                                p []
-                                    [ span []
-                                        [ text "Welcome, "
-                                        ]
-                                    , span []
-                                        [ strong []
-                                            [ text gameResponse.human.nickname
+                                div []
+                                    [ p []
+                                        [ span []
+                                            [ text "Welcome, "
+                                            ]
+                                        , span []
+                                            [ strong []
+                                                [ text gameResponse.human.nickname
+                                                ]
+                                            ]
+                                        , text ("! Spectators count is " ++ String.fromInt gameResponse.gameData.spectatorCount ++ ".")
+                                        , span []
+                                            [ text "Game is currently "
+                                            , viewStatus gameResponse.gameData.status
+                                            , text "."
                                             ]
                                         ]
-                                    , text ("! Spectators count is " ++ String.fromInt gameResponse.gameData.spectatorCount ++ ".")
-                                    , span []
-                                        [ text "Game is currently "
-                                        , viewStatus gameResponse.gameData.status
-                                        , text "."
-                                        ]
+                                    , case gameResponse.gameData.status of
+                                        Pending ->
+                                            p []
+                                                [ span [] [ text "The game hasn't started yet." ]
+                                                , case gameResponse.human.role of
+                                                    Viewer ->
+                                                        button [ onClick HumanWantsIn ]
+                                                            [ text "Join?"
+                                                            ]
+
+                                                    Player ->
+                                                        text "You're in :)"
+                                                ]
+
+                                        Playing ->
+                                            p [] [ text "Game details to come here" ]
+
+                                        Complete ->
+                                            p [] [ text "Hope you had fund" ]
                                     ]
 
                             Nothing ->

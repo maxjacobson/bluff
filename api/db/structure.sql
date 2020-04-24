@@ -10,6 +10,16 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: attendance_role; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.attendance_role AS ENUM (
+    'viewer',
+    'player'
+);
+
+
+--
 -- Name: game_status; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -46,7 +56,8 @@ CREATE TABLE public.game_attendances (
     game_id bigint NOT NULL,
     heartbeat_at timestamp without time zone NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    role public.attendance_role DEFAULT 'viewer'::public.attendance_role NOT NULL
 );
 
 
@@ -266,6 +277,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20200424025346'),
 ('20200424043535'),
 ('20200424052330'),
-('20200424080215');
+('20200424080215'),
+('20200424163412');
 
 
