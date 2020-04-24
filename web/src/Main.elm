@@ -86,10 +86,10 @@ update msg model =
                         GamePage gamePageModel ->
                             case result of
                                 Ok newGameResponse ->
-                                    GamePage { gamePageModel | gameResponse = Just newGameResponse }
+                                    GamePage { gamePageModel | gameResponse = SuccessfullyRequested newGameResponse }
 
-                                Err _ ->
-                                    GamePage { gamePageModel | gameResponse = Nothing }
+                                Err e ->
+                                    GamePage { gamePageModel | gameResponse = FailedToRequest e }
 
                         anything ->
                             anything
@@ -226,7 +226,7 @@ type alias ProfilePageModel =
 
 
 type alias GamePageModel =
-    { gameResponse : Maybe GameResponse
+    { gameResponse : WebData GameResponse Http.Error
     , gameIdFromUrl : String
     }
 
@@ -383,7 +383,7 @@ pageFromUrl url =
         _ ->
             case gameIdFromUrl url of
                 Just gameId ->
-                    GamePage (GamePageModel Nothing gameId)
+                    GamePage (GamePageModel WaitingForResponse gameId)
 
                 _ ->
                     NotFound
@@ -438,7 +438,7 @@ cmdWhenLoadingPage page flags =
 humanJoinsGameCmd : GamePageModel -> Flags -> Cmd Msg
 humanJoinsGameCmd model flags =
     case model.gameResponse of
-        Just response ->
+        SuccessfullyRequested response ->
             post
                 { url = joinGameUrl flags.apiRoot response.gameData.identifier
                 , expect = Http.expectJson GotGameData gameResponseDecoder
@@ -446,7 +446,7 @@ humanJoinsGameCmd model flags =
                 , body = Http.emptyBody
                 }
 
-        Nothing ->
+        _ ->
             Cmd.none
 
 
@@ -471,7 +471,7 @@ pollingCmd page flags currentTime =
             case page of
                 GamePage gamePageModel ->
                     case gamePageModel.gameResponse of
-                        Just gameResponse ->
+                        SuccessfullyRequested gameResponse ->
                             if fewerThanMinutesPassedBetween 5 gameResponse.gameData.lastActionAt currentTime then
                                 -- Keep polling, because the game is active!
                                 cmdWhenLoadingPage page flags
@@ -484,7 +484,7 @@ pollingCmd page flags currentTime =
                                 -- Stop polling
                                 Cmd.none
 
-                        Nothing ->
+                        _ ->
                             Cmd.none
 
                 _ ->
@@ -651,7 +651,7 @@ view model =
                             , text "."
                             ]
                         , case gamePageModel.gameResponse of
-                            Just gameResponse ->
+                            SuccessfullyRequested gameResponse ->
                                 div []
                                     [ p []
                                         [ span []
@@ -690,8 +690,11 @@ view model =
                                             p [] [ text "Hope you had fund" ]
                                     ]
 
-                            Nothing ->
-                                text "Loading gameData"
+                            WaitingForResponse ->
+                                text "Loading..."
+
+                            FailedToRequest e ->
+                                text "Whoops, failed to load game. Yikes. This looks bad."
                         ]
 
                 NotFound ->
