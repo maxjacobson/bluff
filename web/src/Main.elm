@@ -11,6 +11,10 @@ import Time
 import Url
 
 
+
+---- main: entrypoint function
+
+
 main : Program Flags Model Msg
 main =
     Browser.application
@@ -23,267 +27,8 @@ main =
         }
 
 
-type alias Model =
-    { currentUrl : Url.Url
-    , currentPage : Page
-    , key : Nav.Key
-    , apiRoot : String
-    , humanUuid : String
-    }
 
-
-type alias HomePageModel =
-    { gameId : String
-    }
-
-
-type alias GamePageModel =
-    { gameResponse : Maybe GameResponse
-    , gameIdFromUrl : String
-    }
-
-
-type Page
-    = HomePage HomePageModel
-    | GamePage GamePageModel
-    | AboutPage
-    | NotFound
-
-
-type alias Flags =
-    { apiRoot : String
-    , humanUuid : String
-    }
-
-
-pageFromUrl : Url.Url -> Page
-pageFromUrl url =
-    case url.path of
-        "/" ->
-            HomePage (HomePageModel "")
-
-        "/about" ->
-            AboutPage
-
-        _ ->
-            case gameIdFromUrl url of
-                Just gameId ->
-                    GamePage (GamePageModel Nothing gameId)
-
-                _ ->
-                    NotFound
-
-
-gameIdFromUrl : Url.Url -> Maybe String
-gameIdFromUrl url =
-    case String.dropLeft 1 url.path of
-        "" ->
-            Nothing
-
-        anything ->
-            Just anything
-
-
-posixDecoder : Int -> Decoder Time.Posix
-posixDecoder millis =
-    D.succeed (Time.millisToPosix millis)
-
-
-gameDataDecoder : Decoder GameData
-gameDataDecoder =
-    D.map4 GameData
-        (D.field "id" D.string)
-        (D.field "last_action_at" D.int |> D.andThen posixDecoder)
-        (D.field "spectators_count" D.int)
-        (D.field "status" D.string |> D.andThen gameStatusDecoder)
-
-
-gameStatusDecoder : String -> Decoder GameStatus
-gameStatusDecoder status =
-    if status == "pending" then
-        D.succeed Pending
-
-    else if status == "playing" then
-        D.succeed Playing
-
-    else if status == "complete" then
-        D.succeed Complete
-
-    else
-        D.fail ("Unknown status: " ++ status)
-
-
-humanDataDecoder : Decoder HumanData
-humanDataDecoder =
-    D.map2 HumanData
-        (D.field "nickname" D.string)
-        (D.field "heartbeat_at" D.int |> D.andThen posixDecoder)
-
-
-type alias GameResponse =
-    { gameData : GameData
-    , human : HumanData
-    }
-
-
-type alias AvailableGameIdResponse =
-    { gameId : String
-    }
-
-
-availableGameIdResponseDecoder : Decoder AvailableGameIdResponse
-availableGameIdResponseDecoder =
-    D.map AvailableGameIdResponse
-        (D.at [ "data", "id" ] D.string)
-
-
-gameResponseDecoder : Decoder GameResponse
-gameResponseDecoder =
-    D.map2 GameResponse
-        (D.field "data" gameDataDecoder)
-        (D.at [ "meta", "human" ] humanDataDecoder)
-
-
-titleForPage : Page -> String
-titleForPage page =
-    case page of
-        HomePage _ ->
-            "Bluff"
-
-        GamePage model ->
-            model.gameIdFromUrl ++ " - Bluff"
-
-        NotFound ->
-            "Not Found - Bluff"
-
-        AboutPage ->
-            "About - Bluff"
-
-
-cmdWhenLoadingPage : Page -> String -> String -> Cmd Msg
-cmdWhenLoadingPage page apiRoot humanUuid =
-    case page of
-        GamePage gamePageModel ->
-            Http.request
-                { url = apiRoot ++ "/games/" ++ gamePageModel.gameIdFromUrl ++ ".json"
-                , expect = Http.expectJson GotGameData gameResponseDecoder
-                , headers = [ Http.header "X-Human-UUID" humanUuid ]
-                , tracker = Nothing
-                , timeout = Nothing
-                , method = "GET"
-                , body = Http.emptyBody
-                }
-
-        HomePage _ ->
-            Http.request
-                { url = apiRoot ++ "/available-game-id.json"
-                , expect = Http.expectJson GotAvailableGameId availableGameIdResponseDecoder
-                , headers = [ Http.header "X-Human-UUID" humanUuid ]
-                , tracker = Nothing
-                , timeout = Nothing
-                , method = "GET"
-                , body = Http.emptyBody
-                }
-
-        NotFound ->
-            Cmd.none
-
-        AboutPage ->
-            Cmd.none
-
-
-fewerThanMinutesPassedBetween : Int -> Time.Posix -> Time.Posix -> Bool
-fewerThanMinutesPassedBetween minutes a b =
-    let
-        actualDuration =
-            abs (Time.posixToMillis a - Time.posixToMillis b)
-    in
-    actualDuration <= minutes * 60 * 1000
-
-
-greaterThanMinutesPassedBetween : Int -> Time.Posix -> Time.Posix -> Bool
-greaterThanMinutesPassedBetween minutes a b =
-    not (fewerThanMinutesPassedBetween minutes a b)
-
-
-pollingCmd : Page -> String -> String -> Time.Posix -> Cmd Msg
-pollingCmd page apiRoot humanUuid currentTime =
-    let
-        cmd =
-            case page of
-                GamePage gamePageModel ->
-                    case gamePageModel.gameResponse of
-                        Just gameResponse ->
-                            if fewerThanMinutesPassedBetween 5 gameResponse.gameData.lastActionAt currentTime then
-                                -- Keep polling, because the game is active!
-                                cmdWhenLoadingPage page
-                                    apiRoot
-                                    humanUuid
-
-                            else if greaterThanMinutesPassedBetween 2 gameResponse.human.heartbeatAt currentTime then
-                                -- Keep polling, because we haven't checked in a while
-                                cmdWhenLoadingPage page
-                                    apiRoot
-                                    humanUuid
-
-                            else
-                                -- Stop polling
-                                Cmd.none
-
-                        Nothing ->
-                            Cmd.none
-
-                _ ->
-                    Cmd.none
-    in
-    cmd
-
-
-init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
-init flags url key =
-    let
-        page =
-            pageFromUrl url
-
-        cmd =
-            cmdWhenLoadingPage page flags.apiRoot flags.humanUuid
-    in
-    ( { currentUrl = url
-      , currentPage = page
-      , key = key
-      , apiRoot = flags.apiRoot
-      , humanUuid = flags.humanUuid
-      }
-    , cmd
-    )
-
-
-type Msg
-    = UrlRequested Browser.UrlRequest
-    | UpdatedGameID String
-    | SubmittedGoToGame
-    | UrlChanged Url.Url
-    | GotGameData (Result Http.Error GameResponse)
-    | GotAvailableGameId (Result Http.Error AvailableGameIdResponse)
-    | Tick Time.Posix
-
-
-type alias GameData =
-    { identifier : String
-    , lastActionAt : Time.Posix
-    , spectatorCount : Int
-    , status : GameStatus
-    }
-
-
-type GameStatus
-    = Pending
-    | Playing
-    | Complete
-
-
-type alias HumanData =
-    { nickname : String, heartbeatAt : Time.Posix }
+---- update: how things change over time
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -384,9 +129,309 @@ update msg model =
             ( model, cmd )
 
 
+
+---- Flags: the data index.js passes in on boot
+
+
+type alias Flags =
+    { apiRoot : String
+    , humanUuid : String
+    }
+
+
+
+---- Msg: the various things that might happen
+
+
+type Msg
+    = UrlRequested Browser.UrlRequest
+    | UpdatedGameID String
+    | SubmittedGoToGame
+    | UrlChanged Url.Url
+    | GotGameData (Result Http.Error GameResponse)
+    | GotAvailableGameId (Result Http.Error AvailableGameIdResponse)
+    | Tick Time.Posix
+
+
+
+---- Model: the current state of the application
+
+
+type alias Model =
+    { currentUrl : Url.Url
+    , currentPage : Page
+    , key : Nav.Key
+    , apiRoot : String
+    , humanUuid : String
+    }
+
+
+
+---- Data associated with each page
+
+
+type Page
+    = HomePage HomePageModel
+    | GamePage GamePageModel
+    | AboutPage
+    | NotFound
+
+
+type alias HomePageModel =
+    { gameId : String
+    }
+
+
+type alias GamePageModel =
+    { gameResponse : Maybe GameResponse
+    , gameIdFromUrl : String
+    }
+
+
+
+---- Decoded API responses
+
+
+type alias GameResponse =
+    { gameData : GameData
+    , human : HumanData
+    }
+
+
+type alias AvailableGameIdResponse =
+    { gameId : String
+    }
+
+
+type alias GameData =
+    { identifier : String
+    , lastActionAt : Time.Posix
+    , spectatorCount : Int
+    , status : GameStatus
+    }
+
+
+type GameStatus
+    = Pending
+    | Playing
+    | Complete
+
+
+type alias HumanData =
+    { nickname : String, heartbeatAt : Time.Posix }
+
+
+
+---- decoders
+---- These let us convert data from the API into elm types
+
+
+posixDecoder : Int -> Decoder Time.Posix
+posixDecoder millis =
+    D.succeed (Time.millisToPosix millis)
+
+
+gameDataDecoder : Decoder GameData
+gameDataDecoder =
+    D.map4 GameData
+        (D.field "id" D.string)
+        (D.field "last_action_at" D.int |> D.andThen posixDecoder)
+        (D.field "spectators_count" D.int)
+        (D.field "status" D.string |> D.andThen gameStatusDecoder)
+
+
+gameStatusDecoder : String -> Decoder GameStatus
+gameStatusDecoder status =
+    if status == "pending" then
+        D.succeed Pending
+
+    else if status == "playing" then
+        D.succeed Playing
+
+    else if status == "complete" then
+        D.succeed Complete
+
+    else
+        D.fail ("Unknown status: " ++ status)
+
+
+humanDataDecoder : Decoder HumanData
+humanDataDecoder =
+    D.map2 HumanData
+        (D.field "nickname" D.string)
+        (D.field "heartbeat_at" D.int |> D.andThen posixDecoder)
+
+
+availableGameIdResponseDecoder : Decoder AvailableGameIdResponse
+availableGameIdResponseDecoder =
+    D.map AvailableGameIdResponse
+        (D.at [ "data", "id" ] D.string)
+
+
+gameResponseDecoder : Decoder GameResponse
+gameResponseDecoder =
+    D.map2 GameResponse
+        (D.field "data" gameDataDecoder)
+        (D.at [ "meta", "human" ] humanDataDecoder)
+
+
+
+---- application helpers
+
+
+pageFromUrl : Url.Url -> Page
+pageFromUrl url =
+    case url.path of
+        "/" ->
+            HomePage (HomePageModel "")
+
+        "/about" ->
+            AboutPage
+
+        _ ->
+            case gameIdFromUrl url of
+                Just gameId ->
+                    GamePage (GamePageModel Nothing gameId)
+
+                _ ->
+                    NotFound
+
+
+gameIdFromUrl : Url.Url -> Maybe String
+gameIdFromUrl url =
+    case String.dropLeft 1 url.path of
+        "" ->
+            Nothing
+
+        anything ->
+            Just anything
+
+
+cmdWhenLoadingPage : Page -> String -> String -> Cmd Msg
+cmdWhenLoadingPage page apiRoot humanUuid =
+    case page of
+        GamePage gamePageModel ->
+            Http.request
+                { url = apiRoot ++ "/games/" ++ gamePageModel.gameIdFromUrl ++ ".json"
+                , expect = Http.expectJson GotGameData gameResponseDecoder
+                , headers = [ Http.header "X-Human-UUID" humanUuid ]
+                , tracker = Nothing
+                , timeout = Nothing
+                , method = "GET"
+                , body = Http.emptyBody
+                }
+
+        HomePage _ ->
+            Http.request
+                { url = apiRoot ++ "/available-game-id.json"
+                , expect = Http.expectJson GotAvailableGameId availableGameIdResponseDecoder
+                , headers = [ Http.header "X-Human-UUID" humanUuid ]
+                , tracker = Nothing
+                , timeout = Nothing
+                , method = "GET"
+                , body = Http.emptyBody
+                }
+
+        NotFound ->
+            Cmd.none
+
+        AboutPage ->
+            Cmd.none
+
+
+fewerThanMinutesPassedBetween : Int -> Time.Posix -> Time.Posix -> Bool
+fewerThanMinutesPassedBetween minutes a b =
+    let
+        actualDuration =
+            abs (Time.posixToMillis a - Time.posixToMillis b)
+    in
+    actualDuration <= minutes * 60 * 1000
+
+
+greaterThanMinutesPassedBetween : Int -> Time.Posix -> Time.Posix -> Bool
+greaterThanMinutesPassedBetween minutes a b =
+    not (fewerThanMinutesPassedBetween minutes a b)
+
+
+pollingCmd : Page -> String -> String -> Time.Posix -> Cmd Msg
+pollingCmd page apiRoot humanUuid currentTime =
+    let
+        cmd =
+            case page of
+                GamePage gamePageModel ->
+                    case gamePageModel.gameResponse of
+                        Just gameResponse ->
+                            if fewerThanMinutesPassedBetween 5 gameResponse.gameData.lastActionAt currentTime then
+                                -- Keep polling, because the game is active!
+                                cmdWhenLoadingPage page
+                                    apiRoot
+                                    humanUuid
+
+                            else if greaterThanMinutesPassedBetween 2 gameResponse.human.heartbeatAt currentTime then
+                                -- Keep polling, because we haven't checked in a while
+                                cmdWhenLoadingPage page
+                                    apiRoot
+                                    humanUuid
+
+                            else
+                                -- Stop polling
+                                Cmd.none
+
+                        Nothing ->
+                            Cmd.none
+
+                _ ->
+                    Cmd.none
+    in
+    cmd
+
+
+init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init flags url key =
+    let
+        page =
+            pageFromUrl url
+
+        cmd =
+            cmdWhenLoadingPage page flags.apiRoot flags.humanUuid
+    in
+    ( { currentUrl = url
+      , currentPage = page
+      , key = key
+      , apiRoot = flags.apiRoot
+      , humanUuid = flags.humanUuid
+      }
+    , cmd
+    )
+
+
+
+---- SUBSCRIPTIONS
+
+
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Time.every 5000 Tick
+
+
+
+---- VIEW HELPERS
+
+
+titleForPage : Page -> String
+titleForPage page =
+    case page of
+        HomePage _ ->
+            "Bluff"
+
+        GamePage model ->
+            model.gameIdFromUrl ++ " - Bluff"
+
+        NotFound ->
+            "Not Found - Bluff"
+
+        AboutPage ->
+            "About - Bluff"
 
 
 viewHeader : Page -> Html.Html Msg
@@ -417,6 +462,10 @@ viewStatus status =
 
         Complete ->
             text "Complete"
+
+
+
+---- Main view function
 
 
 view : Model -> Browser.Document Msg
