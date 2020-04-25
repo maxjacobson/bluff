@@ -281,9 +281,9 @@ type Page
     | NotFound
 
 
-type WebData msg error
+type WebData response error
     = WaitingForResponse
-    | SuccessfullyRequested msg
+    | SuccessfullyRequested response
     | FailedToRequest error
 
 
