@@ -13,17 +13,69 @@ body {
   font-family: "Source Sans Pro", "Trebuchet MS", "Lucida Grande",
     "Bitstream Vera Sans", "Helvetica Neue", sans-serif;
   margin: 0;
-  text-align: center;
   color: #293c4b;
+  font-size: 48px;
+
+  background-color: #9f9f9f;
+
+  min-height: 100vh;
+  display: flex;
+}
+
+ol,
+ul {
+  margin-left: 50px;
+}
+
+.home-page {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  justify-content: center;
+  align-items: center;
+}
+
+.home-page input[type="submit"] {
+  font-size: 50px;
+  border-radius: 10px;
+  background-color: hsl(50, 92%, 57%);
+  max-width: 80vw;
+}
+
+.home-page input[type="submit"]:active {
+  background-color: hsl(50, 99%, 64%);
+  box-shadow: 10px 10px;
+}
+
+.home-page form {
+  display: inline;
 }
 
 a {
   text-decoration: none;
-  color: #3b9edb;
+  color: #1e4594;
+}
+
+.main-container {
+  max-width: 99vw;
+  background-color: hsl(50, 99%, 64%);
+  margin: 10px auto 0;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.page-content {
+  flex: 1;
+
+  display: flex;
+
+  padding: 25px;
 }
 
 h1 {
-  font-size: 30px;
+  font-size: 50px;
 }
 
 img {
@@ -31,18 +83,28 @@ img {
 }
 
 footer {
-  border-top: 1px dashed black;
+  border-top: 6px solid #9f9f9f;
   margin-top: 20px;
 }
 
+footer li {
+  display: inline-block;
+  padding: 10px;
+}
+
+footer li:not(:first-child)::before {
+  content: "• ";
+}
+
 .icons-credits img {
-  width: 50px;
+  width: 70px;
 }
 
 header {
   display: flex;
   justify-content: center;
   align-items: center;
+  border-bottom: 6px solid #9f9f9f;
 }
 
 header img {

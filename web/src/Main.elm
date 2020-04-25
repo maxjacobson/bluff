@@ -37,21 +37,6 @@ main =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        UpdatedGameID newGameId ->
-            let
-                newPage =
-                    case model.currentPage of
-                        HomePage homePageModel ->
-                            HomePage { homePageModel | gameId = newGameId }
-
-                        anything ->
-                            anything
-
-                newModel =
-                    { model | currentPage = newPage }
-            in
-            ( newModel, Cmd.none )
-
         SubmittedGoToGame ->
             case model.currentPage of
                 HomePage homePageModel ->
@@ -244,7 +229,6 @@ type alias Flags =
 
 type Msg
     = UrlRequested Browser.UrlRequest
-    | UpdatedGameID String
     | SubmittedGoToGame
     | UrlChanged Url.Url
     | GotGameData (Result Http.Error GameResponse)
@@ -278,7 +262,7 @@ type Page
     | GamePage GamePageModel
     | AboutPage
     | ProfilePage ProfilePageModel
-    | NotFound
+    | HowToPlayPage
 
 
 type WebData response error
@@ -453,6 +437,9 @@ pageFromUrl url =
         "/about" ->
             AboutPage
 
+        "/how-to-play" ->
+            HowToPlayPage
+
         "/profile" ->
             ProfilePage
                 { profileResponse = WaitingForResponse
@@ -467,7 +454,7 @@ pageFromUrl url =
                     GamePage (GamePageModel WaitingForResponse gameId)
 
                 _ ->
-                    NotFound
+                    HomePage (HomePageModel "")
 
 
 gameIdFromUrl : Url.Url -> Maybe String
@@ -502,10 +489,10 @@ cmdWhenLoadingPage page flags =
                 , uuid = flags.humanUuid
                 }
 
-        NotFound ->
+        AboutPage ->
             Cmd.none
 
-        AboutPage ->
+        HowToPlayPage ->
             Cmd.none
 
         ProfilePage _ ->
@@ -611,11 +598,11 @@ titleForPage page =
         HomePage _ ->
             "Bluff"
 
+        HowToPlayPage ->
+            "How to play - Bluff"
+
         GamePage model ->
             model.gameIdFromUrl ++ " - Bluff"
-
-        NotFound ->
-            "Not Found - Bluff"
 
         AboutPage ->
             "About - Bluff"
@@ -656,8 +643,9 @@ viewFooter : Html.Html Msg
 viewFooter =
     footer []
         [ ul []
-            [ li [] [ a [ href "/profile" ] [ text "Profile" ] ]
-            , li [] [ a [ href "/about" ] [ text "About" ] ]
+            [ li [] [ a [ href "/how-to-play" ] [ text "How to play" ] ]
+            , li [] [ a [ href "/profile" ] [ text "Profile" ] ]
+            , li [] [ a [ href "/about" ] [ text "About bluff" ] ]
             ]
         ]
 
@@ -683,179 +671,182 @@ view : Model -> Browser.Document Msg
 view model =
     { title = titleForPage model.currentPage
     , body =
-        [ div []
+        [ div [ class "main-container" ]
             [ viewHeader model.currentPage
-            , case model.currentPage of
-                AboutPage ->
-                    div []
-                        [ section []
-                            [ h2 [] [ text "Rules" ]
-                            , p []
-                                [ text "I'm going to add these later, when the game is actually implemented."
-                                ]
+            , div [ class "page-content" ]
+                [ case model.currentPage of
+                    HowToPlayPage ->
+                        div [ class "how-to-play-page" ]
+                            [ p [] [ text "How to play page to come later " ]
                             ]
-                        , section []
-                            [ h2 [] [ text "Source code" ]
-                            , p []
-                                [ a [ href "https://github.com/maxjacobson/bluff", target "_blank" ] [ text "It's over here if you want to knock yourself out." ]
-                                ]
-                            ]
-                        , section []
-                            [ h2 [] [ text "Credits" ]
-                            , p []
-                                [ text "These icons are from "
-                                , a [ href "https://www.toicon.com/about" ] [ strong [] [ text "to [icon]" ] ]
-                                , text ":"
-                                ]
-                            , ul [ class "icons-credits" ]
-                                [ li []
-                                    [ a [ href "https://www.toicon.com/icons/avocado_save" ] [ img [ src "/icons/piggy-bank.svg" ] [] ]
-                                    ]
-                                , li []
-                                    [ a [ href "https://www.toicon.com/icons/hatch_hide" ] [ img [ src "/icons/closed-eye.svg" ] [] ]
+
+                    AboutPage ->
+                        div [ class "about-page" ]
+                            [ section []
+                                [ h2 [] [ text "How to play" ]
+                                , p []
+                                    [ text "See "
+                                    , a [ href "/how-to-play" ] [ text "how to play" ]
+                                    , text " page."
                                     ]
                                 ]
-                            , p []
-                                [ text "This is my first time using "
-                                , strong [] [ text "to [icon]" ]
-                                , text ". It didn't have what I was looking for (an icon of some poker chips) but I liked what it had, better."
+                            , section []
+                                [ h2 [] [ text "Source code" ]
+                                , p []
+                                    [ a [ href "https://github.com/maxjacobson/bluff", target "_blank" ] [ text "It's over here if you want to knock yourself out." ]
+                                    ]
+                                ]
+                            , section []
+                                [ h2 [] [ text "Credits" ]
+                                , p []
+                                    [ text "These icons are from "
+                                    , a [ href "https://www.toicon.com/about" ] [ strong [] [ text "to [icon]" ] ]
+                                    , text ":"
+                                    ]
+                                , ul [ class "icons-credits" ]
+                                    [ li []
+                                        [ a [ href "https://www.toicon.com/icons/avocado_save" ] [ img [ src "/icons/piggy-bank.svg" ] [] ]
+                                        ]
+                                    , li []
+                                        [ a [ href "https://www.toicon.com/icons/hatch_hide" ] [ img [ src "/icons/closed-eye.svg" ] [] ]
+                                        ]
+                                    ]
+                                , p []
+                                    [ text "This is my first time using "
+                                    , strong [] [ text "to [icon]" ]
+                                    , text ". It didn't have what I was looking for (an icon of some poker chips) but I liked what it had, better."
+                                    ]
                                 ]
                             ]
-                        ]
 
-                ProfilePage profilePageModel ->
-                    div []
-                        [ h2 []
-                            [ text "Profile"
+                    ProfilePage profilePageModel ->
+                        div [ class "profile-page" ]
+                            [ h2 []
+                                [ text "Profile"
+                                ]
+                            , case profilePageModel.profileResponse of
+                                WaitingForResponse ->
+                                    p [] [ text "Loading.." ]
+
+                                SuccessfullyRequested response ->
+                                    div []
+                                        [ p []
+                                            [ text "Bluff profiles are ephemeral." ]
+                                        , h3 [] [ text "Your nickname" ]
+                                        , p []
+                                            [ if profilePageModel.editingNickname then
+                                                form [ onSubmit SaveNewNickname ]
+                                                    [ input
+                                                        [ attribute "type" "text"
+                                                        , attribute "placeholder" "Your nickname"
+                                                        , onInput UpdatedNewNickname
+                                                        , value profilePageModel.newNickname
+                                                        , disabled profilePageModel.currentlySavingNickname
+                                                        ]
+                                                        []
+                                                    , input
+                                                        [ attribute "type" "submit"
+                                                        , attribute "value" "Save"
+                                                        , disabled (String.isEmpty profilePageModel.newNickname || profilePageModel.currentlySavingNickname)
+                                                        ]
+                                                        []
+                                                    ]
+
+                                              else
+                                                span []
+                                                    [ strong [] [ text response.human.nickname ]
+                                                    , text " "
+                                                    , button [ onClick MakeNicknameEditable ] [ text "Edit" ]
+                                                    ]
+                                            ]
+                                        , case List.length response.games of
+                                            0 ->
+                                                text ""
+
+                                            _ ->
+                                                div []
+                                                    [ h3 [] [ text "Your games" ]
+                                                    , ol []
+                                                        (List.map
+                                                            (\game ->
+                                                                li [] [ a [ href (pathForGameId game.identifier) ] [ text game.identifier ] ]
+                                                            )
+                                                            response.games
+                                                        )
+                                                    ]
+                                        ]
+
+                                FailedToRequest _ ->
+                                    p [] [ text "Whoops, couldn't load your profile. Look, all I can say is I'm sorry." ]
                             ]
-                        , case profilePageModel.profileResponse of
-                            WaitingForResponse ->
-                                p [] [ text "Loading.." ]
 
-                            SuccessfullyRequested response ->
-                                div []
-                                    [ p []
-                                        [ text "Bluff profiles are ephemeral." ]
-                                    , h3 [] [ text "Your nickname" ]
-                                    , p []
-                                        [ if profilePageModel.editingNickname then
-                                            form [ onSubmit SaveNewNickname ]
-                                                [ input
-                                                    [ attribute "type" "text"
-                                                    , attribute "placeholder" "Your nickname"
-                                                    , onInput UpdatedNewNickname
-                                                    , value profilePageModel.newNickname
-                                                    , disabled profilePageModel.currentlySavingNickname
-                                                    ]
-                                                    []
-                                                , input
-                                                    [ attribute "type" "submit"
-                                                    , attribute "value" "Save"
-                                                    , disabled (String.isEmpty profilePageModel.newNickname || profilePageModel.currentlySavingNickname)
-                                                    ]
-                                                    []
+                    HomePage homePageModel ->
+                        div [ class "home-page" ]
+                            [ form [ onSubmit SubmittedGoToGame ]
+                                [ input [ attribute "type" "submit", attribute "value" "New game", disabled (String.isEmpty homePageModel.gameId) ] []
+                                ]
+                            ]
+
+                    GamePage gamePageModel ->
+                        div [ class "game-page" ]
+                            [ p []
+                                [ text "You are on the game page for game ID: "
+                                , strong [] [ text gamePageModel.gameIdFromUrl ]
+                                , text "."
+                                ]
+                            , case gamePageModel.gameResponse of
+                                SuccessfullyRequested gameResponse ->
+                                    div []
+                                        [ p []
+                                            [ span []
+                                                [ text "Welcome, "
                                                 ]
-
-                                          else
-                                            span []
-                                                [ strong [] [ text response.human.nickname ]
-                                                , text " "
-                                                , button [ onClick MakeNicknameEditable ] [ text "Edit" ]
+                                            , span []
+                                                [ strong []
+                                                    [ text gameResponse.human.nickname
+                                                    ]
+                                                ]
+                                            , text ("! Spectators count is " ++ String.fromInt gameResponse.gameData.spectatorCount ++ ".")
+                                            , span []
+                                                [ text "Game is currently "
+                                                , viewStatus gameResponse.gameData.status
                                                 , text "."
                                                 ]
-                                        ]
-                                    , case List.length response.games of
-                                        0 ->
-                                            text ""
-
-                                        _ ->
-                                            div []
-                                                [ h3 [] [ text "Your games" ]
-                                                , ol []
-                                                    (List.map
-                                                        (\game ->
-                                                            li [] [ a [ href (pathForGameId game.identifier) ] [ text game.identifier ] ]
-                                                        )
-                                                        response.games
-                                                    )
-                                                ]
-                                    ]
-
-                            FailedToRequest _ ->
-                                p [] [ text "Whoops, couldn't load your profile. Look, all I can say is I'm sorry." ]
-                        ]
-
-                HomePage homePageModel ->
-                    div []
-                        [ p [] [ text "Bluff is a poker game for bluffers. Enter your group's game ID to proceed." ]
-                        , form [ onSubmit SubmittedGoToGame ]
-                            [ input [ attribute "type" "text", attribute "placeholder" "Your group's game ID", onInput UpdatedGameID, value homePageModel.gameId ] []
-                            , input [ attribute "type" "submit", attribute "value" "Go", disabled (String.isEmpty homePageModel.gameId) ] []
-                            ]
-                        ]
-
-                GamePage gamePageModel ->
-                    div []
-                        [ p []
-                            [ text "You are on the game page for game ID: "
-                            , strong [] [ text gamePageModel.gameIdFromUrl ]
-                            , text "."
-                            ]
-                        , case gamePageModel.gameResponse of
-                            SuccessfullyRequested gameResponse ->
-                                div []
-                                    [ p []
-                                        [ span []
-                                            [ text "Welcome, "
                                             ]
-                                        , span []
-                                            [ strong []
-                                                [ text gameResponse.human.nickname
-                                                ]
-                                            ]
-                                        , text ("! Spectators count is " ++ String.fromInt gameResponse.gameData.spectatorCount ++ ".")
-                                        , span []
-                                            [ text "Game is currently "
-                                            , viewStatus gameResponse.gameData.status
-                                            , text "."
-                                            ]
-                                        ]
-                                    , case gameResponse.gameData.status of
-                                        Pending ->
-                                            p []
-                                                [ span [] [ text "The game hasn't started yet." ]
-                                                , case gameResponse.human.role of
-                                                    Viewer ->
-                                                        button [ onClick HumanWantsIn ]
-                                                            [ text "Join?"
-                                                            ]
-
-                                                    Player ->
-                                                        div []
-                                                            [ p [] [ text "You're in!" ]
-                                                            , p []
-                                                                [ img [ src "/icons/piggy-bank.svg" ] []
-                                                                , text ("Chips on table: " ++ String.fromInt gameResponse.gameData.totalChipsCount ++ " chips")
+                                        , case gameResponse.gameData.status of
+                                            Pending ->
+                                                p []
+                                                    [ span [] [ text "The game hasn't started yet." ]
+                                                    , case gameResponse.human.role of
+                                                        Viewer ->
+                                                            button [ onClick HumanWantsIn ]
+                                                                [ text "Join?"
                                                                 ]
-                                                            ]
-                                                ]
 
-                                        Playing ->
-                                            p [] [ text "Game details to come here" ]
+                                                        Player ->
+                                                            div []
+                                                                [ p [] [ text "You're in!" ]
+                                                                , p []
+                                                                    [ img [ src "/icons/piggy-bank.svg" ] []
+                                                                    , text ("Chips on table: " ++ String.fromInt gameResponse.gameData.totalChipsCount ++ " chips")
+                                                                    ]
+                                                                ]
+                                                    ]
 
-                                        Complete ->
-                                            p [] [ text "Hope you had fund" ]
-                                    ]
+                                            Playing ->
+                                                p [] [ text "Game details to come here" ]
 
-                            WaitingForResponse ->
-                                text "Loading..."
+                                            Complete ->
+                                                p [] [ text "Hope you had fund" ]
+                                        ]
 
-                            FailedToRequest e ->
-                                text "Whoops, failed to load game. Yikes. This looks bad."
-                        ]
+                                WaitingForResponse ->
+                                    text "Loading..."
 
-                NotFound ->
-                    div [] [ text "Page not found" ]
+                                FailedToRequest _ ->
+                                    text "Whoops, failed to load game. Yikes. This looks bad."
+                            ]
+                ]
             , viewFooter
             ]
         ]
