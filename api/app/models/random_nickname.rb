@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
-# Helps generate a fun random nickname for humans. Maybe later we'll let them
-# override this.
+# Helps generate a fun random default nickname for humans.
 class RandomNickname
   def to_s
     [fun_word, animal].join(' ').titlecase
