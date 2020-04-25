@@ -13,9 +13,9 @@ Lint/RaiseException:
 Lint/StructNewOverride:
   Enabled: true
 
+# I'm not sold on the value
 Metrics/BlockLength:
-  ExcludedMethods:
-    - describe
+  Enabled: false
 
 Metrics/MethodLength:
   ExcludedMethods:

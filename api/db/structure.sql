@@ -314,7 +314,7 @@ CREATE UNIQUE INDEX index_humans_on_uuid ON public.humans USING btree (uuid);
 --
 
 ALTER TABLE ONLY public.game_actions
-    ADD CONSTRAINT fk_rails_4bfe0a88b7 FOREIGN KEY (attendance_id) REFERENCES public.game_attendances(id);
+    ADD CONSTRAINT fk_rails_4bfe0a88b7 FOREIGN KEY (attendance_id) REFERENCES public.game_attendances(id) ON DELETE CASCADE;
 
 
 --
@@ -322,7 +322,7 @@ ALTER TABLE ONLY public.game_actions
 --
 
 ALTER TABLE ONLY public.game_attendances
-    ADD CONSTRAINT fk_rails_6f1ca5105c FOREIGN KEY (game_id) REFERENCES public.games(id);
+    ADD CONSTRAINT fk_rails_6f1ca5105c FOREIGN KEY (game_id) REFERENCES public.games(id) ON DELETE CASCADE;
 
 
 --
@@ -348,6 +348,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20200424163412'),
 ('20200424213458'),
 ('20200424232610'),
-('20200424233710');
+('20200424233710'),
+('20200425042407');
 
 

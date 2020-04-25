@@ -67,3 +67,12 @@ URLs:
 ### bin/lint
 
 Run this one to check that our linting/formatting tools are satisfied.
+
+## Ops
+
+### Pruning old records
+
+```shell
+heroku run -a bluff-api rails prune:abandoned_games
+heroku run -a bluff-api rails prune:stale_humans
+```
