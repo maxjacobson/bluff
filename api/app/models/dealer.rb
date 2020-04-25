@@ -3,8 +3,14 @@
 # This is the thing that looks at the stream of [GameAction]s and keeps track
 # of the state of the world.
 class Dealer
+  # The people currently playing, in the order they're sitting around the table
+  attr_reader :current_players
+
   def initialize(game)
     @game = game
+    @current_players ||= SortedSet.new
+    @chip_counts ||= {}
+    visit_actions
   end
 
   # Some nuances to consider later:
@@ -27,27 +33,36 @@ class Dealer
     end
   end
 
+  def chip_count_for(human)
+    chip_counts.fetch(human.id)
+  end
+
+  # Later, will need to figure out how to make sure we count the pot
   def total_chips_count
-    actions.inject(0) do |sum, action|
-      if action.buy_in?
-        sum + action.value
-      else
-        sum
-      end
-    end
+    chip_counts.values.sum
   end
 
   private
 
-  attr_reader :game
+  attr_reader :game, :chip_counts
+
+  # Replay history from beginning to end to figure out where we stand now
+  def visit_actions
+    actions.each do |action|
+      send("on_action_#{action.action}", action)
+    end
+  end
+
+  def on_action_buy_in(action)
+    # This human bought in, seems like they're playing
+    current_players.add(action.human)
+
+    # This human bought in with a certain number of chips
+    chip_counts[action.human.id] ||= 0
+    chip_counts[action.human.id] += action.value
+  end
 
   def actions
     @actions ||= game.actions.chronological.to_a
-  end
-
-  def current_players
-    actions.each_with_object(Set.new) do |action, set|
-      set.add(action.human) if action.buy_in?
-    end
   end
 end
