@@ -9,6 +9,7 @@ module Factories
 
   def create_human(attrs = {})
     Human.create!({
+      nickname: 'Joe MacMillan',
       uuid: SecureRandom.uuid
     }.merge(attrs))
   end

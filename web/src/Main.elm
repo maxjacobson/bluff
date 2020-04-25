@@ -867,7 +867,7 @@ view model =
                                                             [ p [] [ text "You're in!" ]
                                                             , p []
                                                                 [ Icon.piggyBank
-                                                                , text ("Chips on table: " ++ String.fromInt gameResponse.gameData.totalChipsCount ++ " chips")
+                                                                , text ("Chips on table: " ++ String.fromInt gameResponse.gameData.totalChipsCount)
                                                                 ]
                                                             ]
                                                 ]

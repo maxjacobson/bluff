@@ -27,9 +27,11 @@ RSpec.describe ProfilesController do
     context 'when the human already exists and has some games' do
       let(:game) { create_game }
       let(:human) { Human.recognize(uuid) }
+      let(:other_human) { create_human }
 
       before do
-        human.record_heartbeat(game)
+        GameAction::BuyIn.new(human, game).record
+        GameAction::BuyIn.new(other_human, game).record
       end
 
       it 'shows their games' do
@@ -42,9 +44,16 @@ RSpec.describe ProfilesController do
                    {
                      'id' => game.identifier,
                      'last_action_at' => Millis.new(game.last_action_at).to_i,
-                     'spectators_count' => 1,
+                     'players' => [{
+                       'id' => human.id,
+                       'chips_count' => 100
+                     }, {
+                       'id' => other_human.id,
+                       'chips_count' => 100
+                     }],
+                     'spectators_count' => 2,
                      'status' => 'pending',
-                     'total_chips_count' => 0
+                     'total_chips_count' => 200
                    }
                  ])
       end
