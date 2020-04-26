@@ -59,11 +59,13 @@ RSpec.describe ProfilesController do
                 'players' => [{
                   'id' => human.id,
                   'chips_count' => 100,
-                  'nickname' => human.nickname
+                  'nickname' => human.nickname,
+                  'current_card' => nil
                 }, {
                   'id' => other_human.id,
                   'chips_count' => 100,
-                  'nickname' => other_human.nickname
+                  'nickname' => other_human.nickname,
+                  'current_card' => nil
                 }],
                 'spectators_count' => 2,
                 'status' => 'pending',
