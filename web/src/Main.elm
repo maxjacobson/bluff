@@ -362,10 +362,40 @@ type alias Action =
     }
 
 
+type CardSuit
+    = Diamonds
+    | Clubs
+    | Hearts
+    | Spades
+
+
+type CardRank
+    = Two
+    | Three
+    | Four
+    | Five
+    | Six
+    | Seven
+    | Eight
+    | Nine
+    | Ten
+    | Jack
+    | Queen
+    | King
+    | Ace
+
+
+type alias Card =
+    { suit : CardSuit
+    , rank : CardRank
+    }
+
+
 type alias Player =
     { id : Int
     , nickname : String
     , chipsCount : Int
+    , currentCard : Maybe Card
     }
 
 
@@ -398,12 +428,90 @@ posixDecoder millis =
     D.succeed (Time.millisToPosix millis)
 
 
+cardSuitDecoder : String -> Decoder CardSuit
+cardSuitDecoder suit =
+    case suit of
+        "spades" ->
+            D.succeed Spades
+
+        "clubs" ->
+            D.succeed Clubs
+
+        "diamonds" ->
+            D.succeed Diamonds
+
+        "hearts" ->
+            D.succeed Hearts
+
+        _ ->
+            D.fail ("Unknown suit: " ++ suit)
+
+
+cardRankDecoder : String -> Decoder CardRank
+cardRankDecoder rank =
+    case rank of
+        "two" ->
+            D.succeed Two
+
+        "three" ->
+            D.succeed Three
+
+        "four" ->
+            D.succeed Four
+
+        "five" ->
+            D.succeed Five
+
+        "six" ->
+            D.succeed Six
+
+        "seven" ->
+            D.succeed Seven
+
+        "eight" ->
+            D.succeed Eight
+
+        "nine" ->
+            D.succeed Nine
+
+        "ten" ->
+            D.succeed Ten
+
+        "jack" ->
+            D.succeed Jack
+
+        "queen" ->
+            D.succeed Queen
+
+        "king" ->
+            D.succeed King
+
+        "ace" ->
+            D.succeed Ace
+
+        _ ->
+            D.fail ("Unknown rank: " ++ rank)
+
+
+cardDecoder : Decoder Card
+cardDecoder =
+    D.map2 Card
+        (D.field "suit" D.string |> D.andThen cardSuitDecoder)
+        (D.field "rank" D.string |> D.andThen cardRankDecoder)
+
+
+currentCardDecoder : Decoder (Maybe Card)
+currentCardDecoder =
+    D.nullable cardDecoder
+
+
 playerDecoder : Decoder Player
 playerDecoder =
-    D.map3 Player
+    D.map4 Player
         (D.field "id" D.int)
         (D.field "nickname" D.string)
         (D.field "chips_count" D.int)
+        (D.field "current_card" currentCardDecoder)
 
 
 actionDecoder : Decoder Action
@@ -748,6 +856,73 @@ pageContentClassFor page =
             "profile-page"
 
 
+viewSuit : CardSuit -> Html.Html msg
+viewSuit suit =
+    case suit of
+        Diamonds ->
+            span [ class "suit-diamonds" ] [ text "♦" ]
+
+        Hearts ->
+            span [ class "suit-hearts" ] [ text "♥" ]
+
+        Clubs ->
+            span [ class "suit-clubs" ] [ text "♣" ]
+
+        Spades ->
+            span [ class "suit-spades" ] [ text "♠" ]
+
+
+viewRank : CardRank -> Html.Html msg
+viewRank rank =
+    case rank of
+        Two ->
+            text "2"
+
+        Three ->
+            text "3"
+
+        Four ->
+            text "4"
+
+        Five ->
+            text "5"
+
+        Six ->
+            text "6"
+
+        Seven ->
+            text "7"
+
+        Eight ->
+            text "8"
+
+        Nine ->
+            text "9"
+
+        Ten ->
+            text "10"
+
+        Jack ->
+            text "J"
+
+        Queen ->
+            text "Q"
+
+        King ->
+            text "K"
+
+        Ace ->
+            text "A"
+
+
+viewCard : Card -> Html.Html msg
+viewCard card =
+    span [ class "compact-card" ]
+        [ viewRank card.rank
+        , viewSuit card.suit
+        ]
+
+
 
 ---- Main view function
 
@@ -929,6 +1104,16 @@ view model =
 
                                                                  else
                                                                     [ text "" ]
+                                                                )
+                                                            , span []
+                                                                (case player.currentCard of
+                                                                    Just card ->
+                                                                        [ text " "
+                                                                        , viewCard card
+                                                                        ]
+
+                                                                    _ ->
+                                                                        [ text "" ]
                                                                 )
                                                             ]
                                                         , td [] [ text (String.fromInt player.chipsCount) ]
