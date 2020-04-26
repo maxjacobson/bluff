@@ -5,6 +5,7 @@ Rails.application.routes.draw do
 
   resources :games, only: %i[show] do
     resources :players, only: %i[create]
+    resource :start, only: %i[create], controller: 'game_starts'
   end
 
   resource :available_game_id, only: %i[show], path: 'available-game-id'

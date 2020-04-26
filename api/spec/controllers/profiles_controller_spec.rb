@@ -30,8 +30,8 @@ RSpec.describe ProfilesController do
       let(:other_human) { create_human }
 
       before do
-        GameAction::BuyIn.new(human, game).record
-        GameAction::BuyIn.new(other_human, game).record
+        game.dealer.buy_in!(human)
+        game.dealer.buy_in!(other_human)
       end
 
       it 'shows their games' do
@@ -55,7 +55,7 @@ RSpec.describe ProfilesController do
                   }
                 ],
                 'last_action_at' => Millis.new(game.last_action_at).to_i,
-                'current_dealer_id' => human.id,
+                'current_dealer_id' => nil,
                 'players' => [{
                   'id' => human.id,
                   'chips_count' => 100,
