@@ -12,8 +12,6 @@ class Game < ApplicationRecord
     complete: 'complete'
   }
 
-  scope :newest_to_oldest, -> { order(created_at: :desc) }
-
   def self.available_identifier
     count = 0
     loop do

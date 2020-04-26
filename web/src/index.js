@@ -26,6 +26,7 @@ Elm.Main.init({
   node: document.getElementById("root"),
   flags: {
     apiRoot: process.env.ELM_APP_API_ROOT || "http://localhost:3000",
+    timeAtBoot: new Date().getTime(),
     humanUuid: humanUuid(),
   },
 });
