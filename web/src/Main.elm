@@ -926,14 +926,18 @@ view model =
                                         [ text "Loading..." ]
 
                                     SuccessfullyRequested gameResponse ->
-                                        List.map
-                                            (\action ->
-                                                div [ class "actions-list-item" ]
-                                                    [ div [] [ text (DateFormat.Relative.relativeTime model.currentTime action.time) ]
-                                                    , div [] [ text action.summary ]
-                                                    ]
-                                            )
-                                            gameResponse.gameData.actions
+                                        if List.isEmpty gameResponse.gameData.actions then
+                                            [ text "This space intentionally left blank" ]
+
+                                        else
+                                            List.map
+                                                (\action ->
+                                                    div [ class "actions-list-item" ]
+                                                        [ div [] [ text (DateFormat.Relative.relativeTime model.currentTime action.time) ]
+                                                        , div [] [ text action.summary ]
+                                                        ]
+                                                )
+                                                gameResponse.gameData.actions
                                 )
                             , div [ class "action-buttons" ]
                                 (case gamePageModel.gameResponse of
