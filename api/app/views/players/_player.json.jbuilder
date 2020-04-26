@@ -4,3 +4,12 @@
 json.id player.id
 json.nickname player.nickname
 json.chips_count dealer.chip_count_for(player)
+
+card = dealer.current_card_for(player)
+
+json.current_card(if card.present? && player != current_human
+                    {
+                      rank: card.rank,
+                      suit: card.suit
+                    }
+                  end)

@@ -168,3 +168,13 @@ th {
 .game-page tr:not(:last-child) {
   border-bottom: 1px solid #9f9f9f;
 }
+
+.suit-hearts,
+.suit-diamonds {
+  color: red;
+}
+
+.compact-card {
+  background-color: white;
+  padding: 0 5px;
+}
