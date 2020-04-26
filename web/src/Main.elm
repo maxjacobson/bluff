@@ -1082,6 +1082,7 @@ view model =
                                         [ thead []
                                             [ tr []
                                                 [ th [] [ text "Player" ]
+                                                , th [] [ text "" ]
                                                 , th [] [ text "Chips" ]
                                                 ]
                                             ]
@@ -1098,7 +1099,9 @@ view model =
                                                                     [ text "" ]
                                                                 )
                                                             , text player.nickname
-                                                            , span []
+                                                            ]
+                                                        , td []
+                                                            [ span []
                                                                 (if response.human.id == player.id then
                                                                     [ small [] [ text " (you)" ] ]
 
