@@ -763,21 +763,24 @@ view model =
 
                             SuccessfullyRequested response ->
                                 [ if profilePageModel.editingNickname then
-                                    form [ onSubmit SaveNewNickname ]
-                                        [ input
-                                            [ attribute "type" "text"
-                                            , attribute "placeholder" "Your nickname"
-                                            , onInput UpdatedNewNickname
-                                            , value profilePageModel.newNickname
-                                            , disabled profilePageModel.currentlySavingNickname
+                                    p []
+                                        [ form [ onSubmit SaveNewNickname ]
+                                            [ strong [] [ text "Nickname: " ]
+                                            , input
+                                                [ attribute "type" "text"
+                                                , attribute "placeholder" "Your nickname"
+                                                , onInput UpdatedNewNickname
+                                                , value profilePageModel.newNickname
+                                                , disabled profilePageModel.currentlySavingNickname
+                                                ]
+                                                []
+                                            , input
+                                                [ attribute "type" "submit"
+                                                , attribute "value" "Save"
+                                                , disabled (String.isEmpty profilePageModel.newNickname || profilePageModel.currentlySavingNickname)
+                                                ]
+                                                []
                                             ]
-                                            []
-                                        , input
-                                            [ attribute "type" "submit"
-                                            , attribute "value" "Save"
-                                            , disabled (String.isEmpty profilePageModel.newNickname || profilePageModel.currentlySavingNickname)
-                                            ]
-                                            []
                                         ]
 
                                   else
