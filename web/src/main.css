@@ -164,3 +164,7 @@ th {
 th {
   border-bottom: 4px solid #9f9f9f;
 }
+
+.game-page tr:not(:last-child) {
+  border-bottom: 1px solid #9f9f9f;
+}
