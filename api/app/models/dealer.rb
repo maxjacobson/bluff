@@ -48,6 +48,17 @@ class Dealer
     current_players&.first
   end
 
+  def actions
+    @actions ||= game.actions.chronological.to_a
+  end
+
+  # Summarize what happened
+  # TODO: after implementing cards, make sure not to reveal a player's card to
+  # that player (maybe can reveal after hand ends?)
+  def summarize_for(action, human)
+    send("summarize_#{action.action}_for", action, human)
+  end
+
   private
 
   attr_reader :game, :chip_counts
@@ -68,7 +79,8 @@ class Dealer
     chip_counts[action.human.id] += action.value
   end
 
-  def actions
-    @actions ||= game.actions.chronological.to_a
+  def summarize_buy_in_for(action, _current_human)
+    "#{action.human.nickname} joined with #{action.value} " \
+    "#{'chip'.pluralize(action.value)}"
   end
 end

@@ -17,5 +17,5 @@ class GameAction < ApplicationRecord
     become_dealer: 'become_dealer'
   }
 
-  scope :chronological, -> { order(created_at: :desc) }
+  scope :chronological, -> { order(created_at: :asc) }
 end
