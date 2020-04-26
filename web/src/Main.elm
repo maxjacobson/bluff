@@ -778,13 +778,13 @@ view model =
                                 ]
                             , ul [ class "icons-credits" ]
                                 [ li []
-                                    [ a [ href "https://www.toicon.com/icons/avocado_save" ] [ Icon.piggyBank ]
+                                    [ a [ href "https://www.toicon.com/icons/avocado_save", target "_blank" ] [ Icon.piggyBank ]
                                     ]
                                 , li []
-                                    [ a [ href "https://www.toicon.com/icons/hatch_hide" ] [ Icon.closedEye ]
+                                    [ a [ href "https://www.toicon.com/icons/hatch_hide", target "_blank" ] [ Icon.closedEye ]
                                     ]
                                 , li []
-                                    [ a [ href "https://www.toicon.com/icons/afiado_go" ] [ Icon.arrowRight "A very nice looking arrow icon" ] ]
+                                    [ a [ href "https://www.toicon.com/icons/afiado_go", target "_blank" ] [ Icon.arrowRight "A very nice looking arrow icon" ] ]
                                 ]
                             , p []
                                 [ text "This is my first time using "
@@ -797,7 +797,7 @@ view model =
                     ProfilePage profilePageModel ->
                         case profilePageModel.profileResponse of
                             WaitingForResponse ->
-                                [ p [] [ text "Loading.." ] ]
+                                [ p [] [ text "Loading..." ] ]
 
                             SuccessfullyRequested response ->
                                 [ if profilePageModel.editingNickname then
