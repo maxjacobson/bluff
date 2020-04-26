@@ -3,6 +3,7 @@
 # This is the thing that looks at the stream of [GameAction]s and keeps track
 # of the state of the world.
 class Dealer
+  DEFAULT_ANTE_AMOUNT = 5
   DEFAULT_INITIAL_CHIP_AMOUNT = 100
   MIN_PLAYERS = 2 # no fun to play by yourself
   MAX_PLAYERS = 52 # that's all the cards that exist to go around
@@ -14,6 +15,9 @@ class Dealer
   # who bets first each hand. It should be picked at random for the first hand,
   # and then rotate around the table.
   attr_reader :player_with_dealer_chip
+
+  # How many chips are currently sitting in the middle of the table
+  attr_reader :pot_size
 
   def initialize(game)
     @game = game
@@ -53,6 +57,14 @@ class Dealer
         action: 'become_dealer'
       )
       reappraise_situation
+
+      current_players.each do |player|
+        GameAction.create!(
+          attendance: attendance_for(player),
+          action: 'ante',
+          value: current_ante_amount_for(player)
+        )
+      end
 
       deck = DeckOfCards.new.shuffle
 
@@ -106,7 +118,7 @@ class Dealer
   private
 
   attr_reader :game, :chip_counts, :current_cards
-  attr_writer :player_with_dealer_chip
+  attr_writer :player_with_dealer_chip, :pot_size
 
   # The player after the dealer draws and bets first
   def current_players_in_dealing_order
@@ -138,6 +150,19 @@ class Dealer
     game.attendances.detect { |a| a.human_id == human.id } || raise
   end
 
+  def current_ante_amount_for(_player)
+    # FIXME: if the player somehow has fewer than 5 chips, just toss them in,
+    #        we'll figure out how to split the pot
+
+    # TODO: As the game goes on, ratchet this up?
+    #       Thinking we can keep track of how many hands have been played, and
+    #       have some fixed schedule. Or do some math so it scales as a ratio
+    #       of the median chips count or something fancy like that. E.g. 1/20th
+    #       of median pot size...??
+
+    DEFAULT_ANTE_AMOUNT
+  end
+
   ##### visitor helpers
 
   def appraise_situation
@@ -147,6 +172,7 @@ class Dealer
     @chip_counts = {}
     # TODO: will need to make sure to clear this whenever a hand ends
     @current_cards = {}
+    @pot_size = 0
 
     visit_actions
   end
@@ -158,6 +184,12 @@ class Dealer
     actions.each do |action|
       send("on_action_#{action.action}", action)
     end
+  end
+
+  def on_action_ante(action)
+    # Move the chips from the player to the pot
+    self.pot_size += action.value
+    chip_counts[action.human.id] -= action.value
   end
 
   def on_action_become_dealer(action)
@@ -179,13 +211,16 @@ class Dealer
 
   #### summarizers
 
+  def summarize_ante_for(action, _current_human)
+    "#{action.human.nickname} anted #{plural_chips action.value}"
+  end
+
   def summarize_become_dealer_for(action, _current_human)
     "#{action.human.nickname} received the dealer chip"
   end
 
   def summarize_buy_in_for(action, _current_human)
-    "#{action.human.nickname} joined with #{action.value} " \
-    "#{'chip'.pluralize(action.value)}"
+    "#{action.human.nickname} joined with #{plural_chips action.value}"
   end
 
   def summarize_draw_for(action, current_human)
@@ -195,5 +230,9 @@ class Dealer
       "#{action.human.nickname} drew the " \
       "#{CardDatabaseValue.to_card(action.value)}"
     end
+  end
+
+  def plural_chips(num)
+    "#{num} #{'chip'.pluralize(num)}"
   end
 end
