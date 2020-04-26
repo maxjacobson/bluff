@@ -6,6 +6,12 @@ echo "===> Running elm-format"
 npx elm-format --validate web
 echo "===> elm-format satisfied"
 
+echo "===> Running elm-analyse"
+cd web
+npx elm-analyse
+cd ..
+echo "===> elm-format satisfied"
+
 echo "===> Running rubocop"
 cd api
 bundle exec rubocop

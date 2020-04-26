@@ -1,11 +1,37 @@
 module Main exposing (main)
 
-import Api exposing (..)
+import Api
 import Browser
 import Browser.Navigation as Nav
 import DateFormat.Relative
-import Html exposing (..)
-import Html.Attributes exposing (attribute, class, disabled, href, src, target, value)
+import Html
+    exposing
+        ( a
+        , div
+        , footer
+        , form
+        , h1
+        , h2
+        , h3
+        , header
+        , input
+        , li
+        , ol
+        , p
+        , section
+        , small
+        , span
+        , strong
+        , table
+        , tbody
+        , td
+        , text
+        , th
+        , thead
+        , tr
+        , ul
+        )
+import Html.Attributes exposing (attribute, class, disabled, href, target, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import Icon
@@ -41,8 +67,8 @@ update msg model =
     case msg of
         SubmittedGoToGame ->
             case model.currentPage of
-                HomePage homePageModel ->
-                    ( model, Nav.pushUrl model.key (pathForGameId homePageModel.gameId) )
+                HomePage gameId ->
+                    ( model, Nav.pushUrl model.key (pathForGameId gameId) )
 
                 _ ->
                     ( model, Cmd.none )
@@ -91,14 +117,10 @@ update msg model =
             let
                 newPage =
                     case model.currentPage of
-                        HomePage homePageModel ->
+                        HomePage _ ->
                             case result of
                                 Ok availableGameIdResponse ->
-                                    if homePageModel.gameId == "" then
-                                        HomePage { homePageModel | gameId = availableGameIdResponse.gameId }
-
-                                    else
-                                        model.currentPage
+                                    HomePage availableGameIdResponse
 
                                 _ ->
                                     model.currentPage
@@ -136,7 +158,7 @@ update msg model =
                                     ProfilePage
                                         { profilePageModel
                                             | profileResponse = SuccessfullyRequested response
-                                            , newNickname = response.human.nickname
+                                            , newNickname = response.nickname
                                             , currentlySavingNickname = False
                                             , editingNickname = False
                                         }
@@ -193,8 +215,8 @@ update msg model =
                             { model | currentPage = newPage }
 
                         newCmd =
-                            put
-                                { url = profileUrl model.flags.apiRoot
+                            Api.put
+                                { url = Api.profileUrl model.flags.apiRoot
                                 , expect = Http.expectJson GotProfile profileResponseDecoder
                                 , uuid = model.flags.humanUuid
                                 , body =
@@ -276,8 +298,7 @@ type WebData response error
 
 
 type alias HomePageModel =
-    { gameId : String
-    }
+    String
 
 
 type alias ProfilePageModel =
@@ -305,12 +326,11 @@ type alias GameResponse =
 
 
 type alias AvailableGameIdResponse =
-    { gameId : String
-    }
+    String
 
 
 type alias ProfileResponse =
-    { human : HumanData
+    { nickname : String
     , games : List GameData
     }
 
@@ -352,10 +372,6 @@ type alias HumanGameData =
     , heartbeatAt : Time.Posix
     , role : Role
     }
-
-
-type alias HumanData =
-    { nickname : String }
 
 
 type Role
@@ -437,16 +453,14 @@ humanGameDataDecoder =
         (D.field "role" D.string |> D.andThen roleDecoder)
 
 
-humanDataDecoder : Decoder HumanData
+humanDataDecoder : Decoder String
 humanDataDecoder =
-    D.map HumanData
-        (D.field "nickname" D.string)
+    D.field "nickname" D.string
 
 
 availableGameIdResponseDecoder : Decoder AvailableGameIdResponse
 availableGameIdResponseDecoder =
-    D.map AvailableGameIdResponse
-        (D.at [ "data", "id" ] D.string)
+    D.at [ "data", "id" ] D.string
 
 
 gameResponseDecoder : Decoder GameResponse
@@ -472,7 +486,7 @@ pageFromUrl : Url.Url -> Page
 pageFromUrl url =
     case url.path of
         "/" ->
-            HomePage (HomePageModel "")
+            HomePage ""
 
         "/about" ->
             AboutPage
@@ -494,7 +508,7 @@ pageFromUrl url =
                     GamePage (GamePageModel WaitingForResponse gameId)
 
                 _ ->
-                    HomePage (HomePageModel "")
+                    HomePage ""
 
 
 gameIdFromUrl : Url.Url -> Maybe String
@@ -516,15 +530,15 @@ cmdWhenLoadingPage : Page -> Flags -> Cmd Msg
 cmdWhenLoadingPage page flags =
     case page of
         GamePage gamePageModel ->
-            get
-                { url = gameUrl flags.apiRoot gamePageModel.gameIdFromUrl
+            Api.get
+                { url = Api.gameUrl flags.apiRoot gamePageModel.gameIdFromUrl
                 , expect = Http.expectJson GotGameData gameResponseDecoder
                 , uuid = flags.humanUuid
                 }
 
         HomePage _ ->
-            get
-                { url = availableGameIdUrl flags.apiRoot
+            Api.get
+                { url = Api.availableGameIdUrl flags.apiRoot
                 , expect = Http.expectJson GotAvailableGameId availableGameIdResponseDecoder
                 , uuid = flags.humanUuid
                 }
@@ -536,8 +550,8 @@ cmdWhenLoadingPage page flags =
             Cmd.none
 
         ProfilePage _ ->
-            get
-                { url = profileUrl flags.apiRoot
+            Api.get
+                { url = Api.profileUrl flags.apiRoot
                 , expect = Http.expectJson GotProfile profileResponseDecoder
                 , uuid = flags.humanUuid
                 }
@@ -547,8 +561,8 @@ humanJoinsGameCmd : GamePageModel -> Flags -> Cmd Msg
 humanJoinsGameCmd model flags =
     case model.gameResponse of
         SuccessfullyRequested response ->
-            post
-                { url = joinGameUrl flags.apiRoot response.gameData.identifier
+            Api.post
+                { url = Api.joinGameUrl flags.apiRoot response.gameData.identifier
                 , expect = Http.expectJson GotGameData gameResponseDecoder
                 , uuid = flags.humanUuid
                 , body = Http.emptyBody
@@ -691,19 +705,6 @@ viewFooter =
         ]
 
 
-viewStatus : GameStatus -> Html.Html Msg
-viewStatus status =
-    case status of
-        Pending ->
-            text "Pending"
-
-        Playing ->
-            text "Playing"
-
-        Complete ->
-            text "Complete"
-
-
 pageContentClassFor : Page -> String
 pageContentClassFor page =
     case page of
@@ -824,7 +825,7 @@ view model =
                                   else
                                     p []
                                         [ strong [] [ text "Nickname: " ]
-                                        , text response.human.nickname
+                                        , text response.nickname
                                         , text " "
                                         , input
                                             [ attribute "type" "submit"
@@ -865,9 +866,9 @@ view model =
                             FailedToRequest _ ->
                                 [ p [] [ text "Whoops, couldn't load your profile. Look, all I can say is I'm sorry." ] ]
 
-                    HomePage homePageModel ->
+                    HomePage gameId ->
                         [ form [ onSubmit SubmittedGoToGame ]
-                            [ input [ attribute "type" "submit", attribute "value" "New game", disabled (String.isEmpty homePageModel.gameId) ] []
+                            [ input [ attribute "type" "submit", attribute "value" "New game", disabled (String.isEmpty gameId) ] []
                             ]
                         ]
 
