@@ -859,11 +859,7 @@ view model =
                     GamePage gamePageModel ->
                         [ div [ class "players-table" ]
                             [ case gamePageModel.gameResponse of
-                                FailedToRequest e ->
-                                    let
-                                        _ =
-                                            Debug.log "err" e
-                                    in
+                                FailedToRequest _ ->
                                     text "whoops"
 
                                 SuccessfullyRequested response ->

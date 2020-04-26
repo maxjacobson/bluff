@@ -21,3 +21,4 @@ jobs:
         sudo mv elm /usr/local/bin/
         cd web
         npx elm-test@0.19.1-revision2
+        npx --package create-elm-app@4.2.8 elm-app build
