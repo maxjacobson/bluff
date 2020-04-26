@@ -321,6 +321,15 @@ type alias GameData =
     , spectatorCount : Int
     , totalChipsCount : Int
     , status : GameStatus
+    , players : List Player
+    , currentDealerId : Maybe Int
+    }
+
+
+type alias Player =
+    { id : Int
+    , nickname : String
+    , chipsCount : Int
     }
 
 
@@ -331,7 +340,8 @@ type GameStatus
 
 
 type alias HumanGameData =
-    { nickname : String
+    { id : Int
+    , nickname : String
     , heartbeatAt : Time.Posix
     , role : Role
     }
@@ -342,8 +352,8 @@ type alias HumanData =
 
 
 type Role
-    = Viewer
-    | Player
+    = ViewerRole
+    | PlayerRole
 
 
 
@@ -356,23 +366,33 @@ posixDecoder millis =
     D.succeed (Time.millisToPosix millis)
 
 
+playerDecoder : Decoder Player
+playerDecoder =
+    D.map3 Player
+        (D.field "id" D.int)
+        (D.field "nickname" D.string)
+        (D.field "chips_count" D.int)
+
+
 gameDataDecoder : Decoder GameData
 gameDataDecoder =
-    D.map5 GameData
+    D.map7 GameData
         (D.field "id" D.string)
         (D.field "last_action_at" D.int |> D.andThen posixDecoder)
         (D.field "spectators_count" D.int)
         (D.field "total_chips_count" D.int)
         (D.field "status" D.string |> D.andThen gameStatusDecoder)
+        (D.field "players" (D.list playerDecoder))
+        (D.field "current_dealer_id" (D.nullable D.int))
 
 
 roleDecoder : String -> Decoder Role
 roleDecoder role =
     if role == "viewer" then
-        D.succeed Viewer
+        D.succeed ViewerRole
 
     else if role == "player" then
-        D.succeed Player
+        D.succeed PlayerRole
 
     else
         D.fail ("Unknown role: " ++ role)
@@ -395,7 +415,8 @@ gameStatusDecoder status =
 
 humanGameDataDecoder : Decoder HumanGameData
 humanGameDataDecoder =
-    D.map3 HumanGameData
+    D.map4 HumanGameData
+        (D.field "id" D.int)
         (D.field "nickname" D.string)
         (D.field "heartbeat_at" D.int |> D.andThen posixDecoder)
         (D.field "role" D.string |> D.andThen roleDecoder)
@@ -590,7 +611,7 @@ init flags url key =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Time.every 5000 Tick
+    Time.every 2000 Tick
 
 
 
@@ -700,7 +721,7 @@ view model =
             , div [ class "page-content", class (pageContentClassFor model.currentPage) ]
                 (case model.currentPage of
                     HowToPlayPage ->
-                        [ p [] [ text "Bluff is a simple, fun version of poker. Here's what you do." ]
+                        [ p [] [ text "Bluff is a fun, simple version of poker. Here's what you do." ]
                         , ol []
                             [ li [] [ text "Gather some friends on a zoom call" ]
                             , li []
@@ -747,6 +768,8 @@ view model =
                                 , li []
                                     [ a [ href "https://www.toicon.com/icons/hatch_hide" ] [ Icon.closedEye ]
                                     ]
+                                , li []
+                                    [ a [ href "https://www.toicon.com/icons/afiado_go" ] [ Icon.arrowRight "A very nice looking arrow icon" ] ]
                                 ]
                             , p []
                                 [ text "This is my first time using "
@@ -834,56 +857,88 @@ view model =
                         ]
 
                     GamePage gamePageModel ->
-                        [ case gamePageModel.gameResponse of
-                            SuccessfullyRequested gameResponse ->
-                                div []
-                                    [ p []
-                                        [ span []
-                                            [ text "Welcome, "
-                                            ]
-                                        , span []
-                                            [ strong []
-                                                [ text gameResponse.human.nickname
+                        [ div [ class "players-table" ]
+                            [ case gamePageModel.gameResponse of
+                                FailedToRequest e ->
+                                    let
+                                        _ =
+                                            Debug.log "err" e
+                                    in
+                                    text "whoops"
+
+                                SuccessfullyRequested response ->
+                                    table []
+                                        [ thead []
+                                            [ tr []
+                                                [ th [] [ text "Player" ]
+                                                , th [] [ text "Chips" ]
                                                 ]
                                             ]
-                                        , text ("! Spectators count is " ++ String.fromInt gameResponse.gameData.spectatorCount ++ ".")
-                                        , span []
-                                            [ text "Game is currently "
-                                            , viewStatus gameResponse.gameData.status
-                                            , text "."
-                                            ]
-                                        ]
-                                    , case gameResponse.gameData.status of
-                                        Pending ->
-                                            p []
-                                                [ span [] [ text "The game hasn't started yet. " ]
-                                                , case gameResponse.human.role of
-                                                    Viewer ->
-                                                        input [ attribute "type" "submit", attribute "value" "Join!", onClick HumanWantsIn ]
-                                                            []
+                                        , tbody []
+                                            (List.map
+                                                (\player ->
+                                                    tr []
+                                                        [ td []
+                                                            [ span []
+                                                                (if response.gameData.currentDealerId == Just player.id then
+                                                                    [ Icon.arrowRight "This player is the dealer. That just means the player after them bets first." ]
 
-                                                    Player ->
-                                                        div []
-                                                            [ p [] [ text "You're in!" ]
-                                                            , p []
-                                                                [ Icon.piggyBank
-                                                                , text ("Chips on table: " ++ String.fromInt gameResponse.gameData.totalChipsCount)
-                                                                ]
+                                                                 else
+                                                                    [ text "" ]
+                                                                )
+                                                            , text player.nickname
+                                                            , span []
+                                                                (if response.human.id == player.id then
+                                                                    [ small [] [ text " (you)" ] ]
+
+                                                                 else
+                                                                    [ text "" ]
+                                                                )
                                                             ]
-                                                ]
+                                                        , td [] [ text (String.fromInt player.chipsCount) ]
+                                                        ]
+                                                )
+                                                response.gameData.players
+                                            )
+                                        ]
 
-                                        Playing ->
-                                            p [] [ text "Game details to come here" ]
+                                WaitingForResponse ->
+                                    text "Loading..."
+                            ]
+                        , div [ class "game-actions" ]
+                            [ div [ class "actions-list" ]
+                                [ p [] [ text "actions list to go here" ]
+                                ]
+                            , div [ class "action-buttons" ]
+                                (case gamePageModel.gameResponse of
+                                    FailedToRequest _ ->
+                                        [ text "Whoops" ]
 
-                                        Complete ->
-                                            p [] [ text "Hope you had fund" ]
-                                    ]
+                                    WaitingForResponse ->
+                                        [ text "Loading.." ]
 
-                            WaitingForResponse ->
-                                text "Loading..."
+                                    SuccessfullyRequested gameResponse ->
+                                        [ case gameResponse.gameData.status of
+                                            Pending ->
+                                                p []
+                                                    [ span [] [ text "The game hasn't started yet. " ]
+                                                    ]
 
-                            FailedToRequest _ ->
-                                text "Whoops, failed to load game. Yikes. This looks bad."
+                                            Playing ->
+                                                p [] [ text "Gameplay actions to come here" ]
+
+                                            Complete ->
+                                                p [] [ text "Hope you had fun" ]
+                                        , case gameResponse.human.role of
+                                            ViewerRole ->
+                                                input [ attribute "type" "submit", attribute "value" "Join!", onClick HumanWantsIn ]
+                                                    []
+
+                                            PlayerRole ->
+                                                text ""
+                                        ]
+                                )
+                            ]
                         ]
                 )
             , viewFooter

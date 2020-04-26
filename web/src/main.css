@@ -26,8 +26,34 @@ body {
   display: flex;
   flex: 1;
   justify-content: center;
-  justify-content: center;
   align-items: center;
+}
+
+.page-content.game-page {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+}
+
+.players-table {
+  /* background-color: orange; */
+  flex-grow: 3;
+}
+
+.game-actions {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 2;
+}
+
+.actions-list {
+  /* background-color: green; */
+  flex-grow: 1;
+}
+
+.action-buttons {
+  /* background-color: purple; */
+  flex-grow: 1;
 }
 
 input[type="submit"] {

@@ -1,7 +1,12 @@
-module Icon exposing (closedEye, piggyBank)
+module Icon exposing (arrowRight, closedEye, piggyBank)
 
 import Html exposing (img)
-import Html.Attributes exposing (src)
+import Html.Attributes exposing (src, title)
+
+
+arrowRight : String -> Html.Html m
+arrowRight altText =
+    img [ src "/icons/arrow-right.svg", title altText ] []
 
 
 closedEye : Html.Html m
