@@ -40,25 +40,37 @@ RSpec.describe ProfilesController do
         expect(response).to be_ok
         expect(json_dig(response, 'data', 'nickname')).to eq(human.nickname)
         expect(json_dig(response, 'data', 'games'))
-          .to eq([
-                   {
-                     'id' => game.identifier,
-                     'last_action_at' => Millis.new(game.last_action_at).to_i,
-                     'current_dealer_id' => human.id,
-                     'players' => [{
-                       'id' => human.id,
-                       'chips_count' => 100,
-                       'nickname' => human.nickname
-                     }, {
-                       'id' => other_human.id,
-                       'chips_count' => 100,
-                       'nickname' => other_human.nickname
-                     }],
-                     'spectators_count' => 2,
-                     'status' => 'pending',
-                     'total_chips_count' => 200
-                   }
-                 ])
+          .to match(
+            [
+              {
+                'id' => game.identifier,
+                'actions' => [
+                  {
+                    'created_at' => anything,
+                    'summary' => /joined with 100 chips/
+                  },
+                  {
+                    'created_at' => anything,
+                    'summary' => /joined with 100 chips/
+                  }
+                ],
+                'last_action_at' => Millis.new(game.last_action_at).to_i,
+                'current_dealer_id' => human.id,
+                'players' => [{
+                  'id' => human.id,
+                  'chips_count' => 100,
+                  'nickname' => human.nickname
+                }, {
+                  'id' => other_human.id,
+                  'chips_count' => 100,
+                  'nickname' => other_human.nickname
+                }],
+                'spectators_count' => 2,
+                'status' => 'pending',
+                'total_chips_count' => 200
+              }
+            ]
+          )
       end
     end
   end

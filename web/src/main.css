@@ -48,7 +48,13 @@ body {
 
 .actions-list {
   /* background-color: green; */
-  flex-grow: 1;
+  height: 400px;
+  overflow-y: scroll;
+  font-size: 26px;
+}
+
+.actions-list-item {
+  margin-bottom: 12px;
 }
 
 .action-buttons {

@@ -323,6 +323,13 @@ type alias GameData =
     , status : GameStatus
     , players : List Player
     , currentDealerId : Maybe Int
+    , actions : List Action
+    }
+
+
+type alias Action =
+    { time : Time.Posix
+    , summary : String
     }
 
 
@@ -374,9 +381,16 @@ playerDecoder =
         (D.field "chips_count" D.int)
 
 
+actionDecoder : Decoder Action
+actionDecoder =
+    D.map2 Action
+        (D.field "created_at" D.int |> D.andThen posixDecoder)
+        (D.field "summary" D.string)
+
+
 gameDataDecoder : Decoder GameData
 gameDataDecoder =
-    D.map7 GameData
+    D.map8 GameData
         (D.field "id" D.string)
         (D.field "last_action_at" D.int |> D.andThen posixDecoder)
         (D.field "spectators_count" D.int)
@@ -384,6 +398,7 @@ gameDataDecoder =
         (D.field "status" D.string |> D.andThen gameStatusDecoder)
         (D.field "players" (D.list playerDecoder))
         (D.field "current_dealer_id" (D.nullable D.int))
+        (D.field "actions" (D.list actionDecoder))
 
 
 roleDecoder : String -> Decoder Role
@@ -903,8 +918,23 @@ view model =
                             ]
                         , div [ class "game-actions" ]
                             [ div [ class "actions-list" ]
-                                [ p [] [ text "actions list to go here" ]
-                                ]
+                                (case gamePageModel.gameResponse of
+                                    FailedToRequest _ ->
+                                        [ text "Whoops!" ]
+
+                                    WaitingForResponse ->
+                                        [ text "Loading..." ]
+
+                                    SuccessfullyRequested gameResponse ->
+                                        List.map
+                                            (\action ->
+                                                div [ class "actions-list-item" ]
+                                                    [ div [] [ text (DateFormat.Relative.relativeTime model.currentTime action.time) ]
+                                                    , div [] [ text action.summary ]
+                                                    ]
+                                            )
+                                            gameResponse.gameData.actions
+                                )
                             , div [ class "action-buttons" ]
                                 (case gamePageModel.gameResponse of
                                     FailedToRequest _ ->

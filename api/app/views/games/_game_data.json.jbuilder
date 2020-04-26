@@ -10,3 +10,7 @@ json.players game.dealer.current_players,
              as: :player,
              locals: { dealer: game.dealer }
 json.total_chips_count game.dealer.total_chips_count
+json.actions game.dealer.actions.reverse,
+             partial: 'games/action',
+             as: :action,
+             locals: { dealer: game.dealer }
