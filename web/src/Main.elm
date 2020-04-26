@@ -236,6 +236,14 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        PlayerWantsToStartGame ->
+            case model.currentPage of
+                GamePage gamePageModel ->
+                    ( model, playerStartsGameCmd gamePageModel model.flags )
+
+                _ ->
+                    ( model, Cmd.none )
+
 
 
 ---- Flags: the data index.js passes in on boot
@@ -264,6 +272,7 @@ type Msg
     | MakeNicknameEditable
     | UpdatedNewNickname String
     | SaveNewNickname
+    | PlayerWantsToStartGame
 
 
 
@@ -563,6 +572,21 @@ humanJoinsGameCmd model flags =
         SuccessfullyRequested response ->
             Api.post
                 { url = Api.joinGameUrl flags.apiRoot response.gameData.identifier
+                , expect = Http.expectJson GotGameData gameResponseDecoder
+                , uuid = flags.humanUuid
+                , body = Http.emptyBody
+                }
+
+        _ ->
+            Cmd.none
+
+
+playerStartsGameCmd : GamePageModel -> Flags -> Cmd Msg
+playerStartsGameCmd model flags =
+    case model.gameResponse of
+        SuccessfullyRequested response ->
+            Api.post
+                { url = Api.startGameUrl flags.apiRoot response.gameData.identifier
                 , expect = Http.expectJson GotGameData gameResponseDecoder
                 , uuid = flags.humanUuid
                 , body = Http.emptyBody
@@ -876,7 +900,7 @@ view model =
                         [ div [ class "players-table" ]
                             [ case gamePageModel.gameResponse of
                                 FailedToRequest _ ->
-                                    text "whoops"
+                                    text "Whooooops"
 
                                 SuccessfullyRequested response ->
                                     table []
@@ -921,7 +945,7 @@ view model =
                             [ div [ class "actions-list" ]
                                 (case gamePageModel.gameResponse of
                                     FailedToRequest _ ->
-                                        [ text "Whoops!" ]
+                                        [ text "Yikes! I blew it." ]
 
                                     WaitingForResponse ->
                                         [ text "Loading..." ]
@@ -943,7 +967,7 @@ view model =
                             , div [ class "action-buttons" ]
                                 (case gamePageModel.gameResponse of
                                     FailedToRequest _ ->
-                                        [ text "Whoops" ]
+                                        [ text "Yuh oh..." ]
 
                                     WaitingForResponse ->
                                         [ text "Loading.." ]
@@ -952,7 +976,27 @@ view model =
                                         [ case gameResponse.gameData.status of
                                             Pending ->
                                                 p []
-                                                    [ span [] [ text "The game hasn't started yet. " ]
+                                                    [ span []
+                                                        [ case gameResponse.human.role of
+                                                            PlayerRole ->
+                                                                form [ onSubmit PlayerWantsToStartGame ]
+                                                                    [ input
+                                                                        [ attribute "type" "submit"
+                                                                        , attribute "value"
+                                                                            (if List.length gameResponse.gameData.players >= 2 then
+                                                                                "Start game"
+
+                                                                             else
+                                                                                "Waiting for two players to join..."
+                                                                            )
+                                                                        , disabled (List.length gameResponse.gameData.players < 2)
+                                                                        ]
+                                                                        []
+                                                                    ]
+
+                                                            ViewerRole ->
+                                                                text ""
+                                                        ]
                                                     ]
 
                                             Playing ->

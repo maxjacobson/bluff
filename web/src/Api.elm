@@ -1,4 +1,13 @@
-module Api exposing (availableGameIdUrl, gameUrl, get, joinGameUrl, post, profileUrl, put)
+module Api exposing
+    ( availableGameIdUrl
+    , gameUrl
+    , get
+    , joinGameUrl
+    , post
+    , profileUrl
+    , put
+    , startGameUrl
+    )
 
 import Http
 import Url.Builder
@@ -22,6 +31,11 @@ joinGameUrl apiRoot gameId =
 profileUrl : String -> String
 profileUrl apiRoot =
     Url.Builder.crossOrigin apiRoot [ "profile" ++ ".json" ] []
+
+
+startGameUrl : String -> String -> String
+startGameUrl apiRoot gameId =
+    Url.Builder.crossOrigin apiRoot [ "games", gameId, "start" ++ ".json" ] []
 
 
 type alias GetRequest m =

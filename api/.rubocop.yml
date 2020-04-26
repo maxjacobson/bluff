@@ -13,13 +13,9 @@ Lint/RaiseException:
 Lint/StructNewOverride:
   Enabled: true
 
-# I'm not sold on the value
-Metrics/BlockLength:
+# I'm not sold on the value at this time
+Metrics:
   Enabled: false
-
-Metrics/MethodLength:
-  ExcludedMethods:
-    - up
 
 Style/ExponentialNotation:
   Enabled: true

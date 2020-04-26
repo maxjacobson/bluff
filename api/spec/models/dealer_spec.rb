@@ -8,20 +8,22 @@ RSpec.describe Dealer do
   let(:gordon) { create_human(nickname: 'Gordon') }
   subject(:dealer) { described_class.new(game) }
 
-  describe '#can_join?' do
+  describe '#buy_in!' do
     before do
-      GameAction::BuyIn.new(gordon, game).record
+      dealer.buy_in!(gordon)
     end
 
     context 'when the player has not yet joined' do
-      it 'returns true' do
-        expect(dealer.can_join?(donna)).to be true
+      it 'emits an additional action' do
+        expect { dealer.buy_in!(donna) }.to change {
+                                              GameAction.count
+                                            }.from(1).to(2)
       end
     end
 
     context 'when the player already joined' do
       it 'returns false' do
-        expect(dealer.can_join?(gordon)).to be false
+        expect { dealer.buy_in!(gordon) }.to_not(change { GameAction.count })
       end
     end
   end
