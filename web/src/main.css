@@ -22,11 +22,6 @@ body {
   display: flex;
 }
 
-ol,
-ul {
-  margin-left: 50px;
-}
-
 .home-page {
   display: flex;
   flex: 1;
