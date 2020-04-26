@@ -601,8 +601,8 @@ titleForPage page =
         HowToPlayPage ->
             "How to play - Bluff"
 
-        GamePage model ->
-            model.gameIdFromUrl ++ " - Bluff"
+        GamePage _ ->
+            "Bluff"
 
         AboutPage ->
             "About - Bluff"
