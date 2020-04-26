@@ -23,7 +23,7 @@ class Card
     eight
     nine
     ten
-    Jack
+    jack
     queen
     king
     ace
