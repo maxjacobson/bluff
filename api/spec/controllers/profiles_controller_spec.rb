@@ -44,12 +44,15 @@ RSpec.describe ProfilesController do
                    {
                      'id' => game.identifier,
                      'last_action_at' => Millis.new(game.last_action_at).to_i,
+                     'current_dealer_id' => human.id,
                      'players' => [{
                        'id' => human.id,
-                       'chips_count' => 100
+                       'chips_count' => 100,
+                       'nickname' => human.nickname
                      }, {
                        'id' => other_human.id,
-                       'chips_count' => 100
+                       'chips_count' => 100,
+                       'nickname' => other_human.nickname
                      }],
                      'spectators_count' => 2,
                      'status' => 'pending',

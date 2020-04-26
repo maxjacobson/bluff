@@ -17,6 +17,7 @@ class Dealer
   #
   # - Can a player re-join after resigning?
   # - Should there be a ceiling on players?
+  # - Can a player join after the game has ended?
   def can_join?(human)
     current_players.exclude?(human)
   end
@@ -40,6 +41,11 @@ class Dealer
   # Later, will need to figure out how to make sure we count the pot
   def total_chips_count
     chip_counts.values.sum
+  end
+
+  # FIXME: record an action and use that to determine who the current dealer is
+  def player_with_dealer_chip
+    current_players&.first
   end
 
   private

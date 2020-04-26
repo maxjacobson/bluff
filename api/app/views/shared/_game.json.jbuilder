@@ -7,6 +7,7 @@ end
 json.meta do
   if current_human.present?
     json.human do
+      json.id current_human.id
       json.nickname current_human.nickname
       json.heartbeat_at Millis.new(current_human.heartbeat_for(game)).to_i
       json.role game.dealer.role(current_human)
