@@ -68,8 +68,7 @@ RSpec.describe ProfilesController do
                   'current_card' => nil
                 }],
                 'spectators_count' => 2,
-                'status' => 'pending',
-                'total_chips_count' => 200
+                'status' => 'pending'
               }
             ]
           )

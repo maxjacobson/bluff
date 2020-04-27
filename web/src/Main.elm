@@ -244,6 +244,34 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        PlayerWantsToPlaceBet ->
+            case model.currentPage of
+                GamePage gamePageModel ->
+                    ( model, playerPlacesBet gamePageModel model.flags )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        PlayerChangedBetAmount amount ->
+            let
+                newPage =
+                    case model.currentPage of
+                        GamePage gamePageModel ->
+                            case String.toInt amount of
+                                Just amountInt ->
+                                    GamePage { gamePageModel | betAmount = Just amountInt }
+
+                                Nothing ->
+                                    model.currentPage
+
+                        anything ->
+                            anything
+
+                newModel =
+                    { model | currentPage = newPage }
+            in
+            ( newModel, Cmd.none )
+
 
 
 ---- Flags: the data index.js passes in on boot
@@ -273,6 +301,8 @@ type Msg
     | UpdatedNewNickname String
     | SaveNewNickname
     | PlayerWantsToStartGame
+    | PlayerWantsToPlaceBet
+    | PlayerChangedBetAmount String
 
 
 
@@ -321,6 +351,7 @@ type alias ProfilePageModel =
 type alias GamePageModel =
     { gameResponse : WebData GameResponse Http.Error
     , gameIdFromUrl : String
+    , betAmount : Maybe Int
     }
 
 
@@ -347,12 +378,44 @@ type alias ProfileResponse =
 type alias GameData =
     { identifier : String
     , lastActionAt : Time.Posix
-    , spectatorCount : Int
-    , totalChipsCount : Int
     , status : GameStatus
     , players : List Player
-    , currentDealerId : Maybe Int
     , actions : List Action
+    , nextAction : Maybe NextAction
+    , potSize : Int
+    }
+
+
+type alias BetAction =
+    { available : Bool
+    , minimum : Int
+    , maximum : Int
+    }
+
+
+type alias RaiseAction =
+    { available : Bool }
+
+
+type alias CallAction =
+    { available : Bool }
+
+
+type alias CheckAction =
+    { available : Bool }
+
+
+type alias FoldAction =
+    { available : Bool }
+
+
+type alias NextAction =
+    { player : HumanGameData
+    , bet : BetAction
+    , raise : RaiseAction
+    , call : CallAction
+    , check : CheckAction
+    , fold : FoldAction
     }
 
 
@@ -396,6 +459,7 @@ type alias Player =
     , nickname : String
     , chipsCount : Int
     , currentCard : Maybe Card
+    , inCurrentHand : Bool
     }
 
 
@@ -507,11 +571,12 @@ currentCardDecoder =
 
 playerDecoder : Decoder Player
 playerDecoder =
-    D.map4 Player
+    D.map5 Player
         (D.field "id" D.int)
         (D.field "nickname" D.string)
         (D.field "chips_count" D.int)
         (D.field "current_card" currentCardDecoder)
+        (D.field "in_current_hand" D.bool)
 
 
 actionDecoder : Decoder Action
@@ -521,17 +586,59 @@ actionDecoder =
         (D.field "summary" D.string)
 
 
+betActionDecoder : Decoder BetAction
+betActionDecoder =
+    D.map3 BetAction
+        (D.field "available" D.bool)
+        (D.field "minimum" D.int)
+        (D.field "maximum" D.int)
+
+
+raiseActionDecoder : Decoder RaiseAction
+raiseActionDecoder =
+    D.map RaiseAction
+        (D.field "available" D.bool)
+
+
+callActionDecoder : Decoder CallAction
+callActionDecoder =
+    D.map CallAction
+        (D.field "available" D.bool)
+
+
+checkActionDecoder : Decoder CheckAction
+checkActionDecoder =
+    D.map CheckAction
+        (D.field "available" D.bool)
+
+
+foldActionDecoder : Decoder FoldAction
+foldActionDecoder =
+    D.map FoldAction
+        (D.field "available" D.bool)
+
+
+nextActionDecoder : Decoder NextAction
+nextActionDecoder =
+    D.map6 NextAction
+        (D.field "player" humanGameDataDecoder)
+        (D.field "bet" betActionDecoder)
+        (D.field "raise" raiseActionDecoder)
+        (D.field "call" callActionDecoder)
+        (D.field "check" checkActionDecoder)
+        (D.field "fold" foldActionDecoder)
+
+
 gameDataDecoder : Decoder GameData
 gameDataDecoder =
-    D.map8 GameData
+    D.map7 GameData
         (D.field "id" D.string)
         (D.field "last_action_at" D.int |> D.andThen posixDecoder)
-        (D.field "spectators_count" D.int)
-        (D.field "total_chips_count" D.int)
         (D.field "status" D.string |> D.andThen gameStatusDecoder)
         (D.field "players" (D.list playerDecoder))
-        (D.field "current_dealer_id" (D.nullable D.int))
         (D.field "actions" (D.list actionDecoder))
+        (D.field "next_action" (D.nullable nextActionDecoder))
+        (D.field "pot_size" D.int)
 
 
 roleDecoder : String -> Decoder Role
@@ -622,7 +729,11 @@ pageFromUrl url =
         _ ->
             case gameIdFromUrl url of
                 Just gameId ->
-                    GamePage (GamePageModel WaitingForResponse gameId)
+                    GamePage
+                        { gameResponse = WaitingForResponse
+                        , gameIdFromUrl = gameId
+                        , betAmount = Nothing
+                        }
 
                 _ ->
                     HomePage ""
@@ -701,6 +812,35 @@ playerStartsGameCmd model flags =
                 }
 
         _ ->
+            Cmd.none
+
+
+playerPlacesBet : GamePageModel -> Flags -> Cmd Msg
+playerPlacesBet model flags =
+    case model.betAmount of
+        Just amount ->
+            case model.gameResponse of
+                SuccessfullyRequested response ->
+                    Api.post
+                        { url = Api.placeBetUrl flags.apiRoot response.gameData.identifier
+                        , expect = Http.expectJson GotGameData gameResponseDecoder
+                        , uuid = flags.humanUuid
+                        , body =
+                            Http.jsonBody
+                                (E.object
+                                    [ ( "bets"
+                                      , E.object
+                                            [ ( "amount", E.int amount )
+                                            ]
+                                      )
+                                    ]
+                                )
+                        }
+
+                _ ->
+                    Cmd.none
+
+        Nothing ->
             Cmd.none
 
 
@@ -923,6 +1063,15 @@ viewCard card =
         ]
 
 
+pluralizeChips : Int -> String
+pluralizeChips num =
+    if num == 1 then
+        "1 chip"
+
+    else
+        String.fromInt num ++ " chips"
+
+
 
 ---- Main view function
 
@@ -978,7 +1127,7 @@ view model =
                                 ]
                             , ul [ class "icons-credits" ]
                                 [ li []
-                                    [ a [ href "https://www.toicon.com/icons/avocado_save", target "_blank" ] [ Icon.piggyBank ]
+                                    [ a [ href "https://www.toicon.com/icons/avocado_save", target "_blank" ] [ Icon.piggyBank "A very nice piggy bank icon" ]
                                     ]
                                 , li []
                                     [ a [ href "https://www.toicon.com/icons/hatch_hide", target "_blank" ] [ Icon.closedEye ]
@@ -1067,7 +1216,23 @@ view model =
 
                     HomePage gameId ->
                         [ form [ onSubmit SubmittedGoToGame ]
-                            [ input [ attribute "type" "submit", attribute "value" "New game", disabled (String.isEmpty gameId) ] []
+                            [ let
+                                isDisabled =
+                                    String.isEmpty gameId
+
+                                copy =
+                                    if isDisabled then
+                                        "You're not ready"
+
+                                    else
+                                        "New game"
+                              in
+                              input
+                                [ attribute "type" "submit"
+                                , attribute "value" copy
+                                , disabled isDisabled
+                                ]
+                                []
                             ]
                         ]
 
@@ -1078,52 +1243,69 @@ view model =
                                     text "Whooooops"
 
                                 SuccessfullyRequested response ->
-                                    table []
-                                        [ thead []
-                                            [ tr []
-                                                [ th [] [ text "Player" ]
-                                                , th [] [ text "" ]
-                                                , th [] [ text "Chips" ]
-                                                ]
+                                    div []
+                                        [ p []
+                                            [ Icon.piggyBank "These chips are at stake in this hand"
+                                            , text (" " ++ pluralizeChips response.gameData.potSize)
+                                            , text " on the table."
                                             ]
-                                        , tbody []
-                                            (List.map
-                                                (\player ->
-                                                    tr []
-                                                        [ td []
-                                                            [ span []
-                                                                (if response.gameData.currentDealerId == Just player.id then
-                                                                    [ Icon.arrowRight "This player is the dealer. That just means the player after them bets first." ]
+                                        , table []
+                                            [ thead []
+                                                [ tr []
+                                                    [ th [] [ text "Player" ]
+                                                    , th [] [ text "" ]
+                                                    , th [] [ text "Chips" ]
+                                                    ]
+                                                ]
+                                            , tbody []
+                                                (List.map
+                                                    (\player ->
+                                                        tr
+                                                            [ class
+                                                                (if player.inCurrentHand then
+                                                                    "player in-hand"
 
                                                                  else
-                                                                    [ text "" ]
+                                                                    "player not-in-hand"
                                                                 )
-                                                            , text player.nickname
                                                             ]
-                                                        , td []
-                                                            [ span []
-                                                                (if response.human.id == player.id then
-                                                                    [ small [] [ text " (you)" ] ]
+                                                            [ td []
+                                                                [ case response.gameData.nextAction of
+                                                                    Just nextAction ->
+                                                                        if nextAction.player.id == player.id then
+                                                                            Icon.arrowRight "The action is to this player."
 
-                                                                 else
-                                                                    [ text "" ]
-                                                                )
-                                                            , span []
-                                                                (case player.currentCard of
-                                                                    Just card ->
-                                                                        [ text " "
-                                                                        , viewCard card
-                                                                        ]
+                                                                        else
+                                                                            text ""
 
                                                                     _ ->
+                                                                        text ""
+                                                                , text player.nickname
+                                                                ]
+                                                            , td []
+                                                                [ span []
+                                                                    (if response.human.id == player.id then
+                                                                        [ small [] [ text "(you)" ] ]
+
+                                                                     else
                                                                         [ text "" ]
-                                                                )
+                                                                    )
+                                                                , span []
+                                                                    (case player.currentCard of
+                                                                        Just card ->
+                                                                            [ viewCard card
+                                                                            ]
+
+                                                                        _ ->
+                                                                            [ text "" ]
+                                                                    )
+                                                                ]
+                                                            , td [] [ text (String.fromInt player.chipsCount) ]
                                                             ]
-                                                        , td [] [ text (String.fromInt player.chipsCount) ]
-                                                        ]
+                                                    )
+                                                    response.gameData.players
                                                 )
-                                                response.gameData.players
-                                            )
+                                            ]
                                         ]
 
                                 WaitingForResponse ->
@@ -1188,7 +1370,81 @@ view model =
                                                     ]
 
                                             Playing ->
-                                                p [] [ text "Gameplay actions to come here" ]
+                                                case gameResponse.gameData.nextAction of
+                                                    Just nextAction ->
+                                                        div []
+                                                            (if nextAction.player.id /= gameResponse.human.id then
+                                                                [ p [] [ text ("Waiting for " ++ nextAction.player.nickname ++ " to act") ] ]
+
+                                                             else
+                                                                [ h1 [] [ text "Your turn to act" ]
+                                                                , div []
+                                                                    [ if nextAction.bet.available then
+                                                                        let
+                                                                            currentValue =
+                                                                                case gamePageModel.betAmount of
+                                                                                    Just value ->
+                                                                                        value
+
+                                                                                    Nothing ->
+                                                                                        0
+
+                                                                            isDisabled =
+                                                                                currentValue < nextAction.bet.minimum || currentValue > nextAction.bet.maximum
+                                                                        in
+                                                                        form [ disabled isDisabled, onSubmit PlayerWantsToPlaceBet ]
+                                                                            [ input
+                                                                                [ attribute "type" "number"
+                                                                                , attribute "min" (String.fromInt nextAction.bet.minimum)
+                                                                                , attribute "max" (String.fromInt nextAction.bet.maximum)
+                                                                                , attribute "value" (String.fromInt currentValue)
+                                                                                , onInput PlayerChangedBetAmount
+                                                                                ]
+                                                                                []
+                                                                            , input
+                                                                                [ attribute "type" "submit"
+                                                                                , attribute "value" "Bet"
+                                                                                , disabled isDisabled
+                                                                                ]
+                                                                                []
+                                                                            ]
+
+                                                                      else
+                                                                        p [] [ text "You can't bet" ]
+                                                                    , div []
+                                                                        [ if nextAction.raise.available then
+                                                                            p [] [ text "You can raise" ]
+
+                                                                          else
+                                                                            p [] [ text "You can't raise" ]
+                                                                        ]
+                                                                    , div []
+                                                                        [ if nextAction.call.available then
+                                                                            p [] [ text "You can call" ]
+
+                                                                          else
+                                                                            p [] [ text "You can't call" ]
+                                                                        ]
+                                                                    , div []
+                                                                        [ if nextAction.check.available then
+                                                                            p [] [ text "You can check" ]
+
+                                                                          else
+                                                                            p [] [ text "You can't check" ]
+                                                                        ]
+                                                                    , div []
+                                                                        [ if nextAction.fold.available then
+                                                                            p [] [ text "You can fold" ]
+
+                                                                          else
+                                                                            p [] [ text "You can't fold" ]
+                                                                        ]
+                                                                    ]
+                                                                ]
+                                                            )
+
+                                                    Nothing ->
+                                                        text ""
 
                                             Complete ->
                                                 p [] [ text "Hope you had fun" ]

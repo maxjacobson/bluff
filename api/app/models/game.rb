@@ -24,12 +24,6 @@ class Game < ApplicationRecord
     end
   end
 
-  def recent_spectators_count
-    humans
-      .where("game_attendances.heartbeat_at > now() - interval '10 minutes'")
-      .count
-  end
-
   def dealer
     Dealer.new(self)
   end

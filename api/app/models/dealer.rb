@@ -79,6 +79,57 @@ class Dealer
     end
   end
 
+  def bet!(amount, player)
+    return unless can_bet?(amount, player)
+
+    ApplicationRecord.transaction do
+      GameAction.create!(
+        attendance: attendance_for(player),
+        action: 'bet',
+        value: amount
+      )
+    end
+  end
+
+  def next_action
+    player = action_to
+    return if player.blank?
+
+    attendance = attendance_for(player)
+    ante_amount = current_ante_amount_for(player)
+    chips = chip_count_for(player)
+
+    {
+
+      player: {
+        id: player.id,
+        nickname: player.nickname,
+        heartbeat_at: Millis.new(attendance.heartbeat_at).to_i,
+        role: role(player)
+      },
+      bet: {
+        available: action_to == player,
+
+        # ordinarily you shouldn't be able to bet less than tha ante amount,
+        # but if that's all you got, OK
+        minimum: [chips, ante_amount].min,
+        maximum: chips
+      },
+      raise: {
+        available: false
+      },
+      call: {
+        available: false
+      },
+      check: {
+        available: false
+      },
+      fold: {
+        available: false
+      }
+    }
+  end
+
   def latest_action_at
     actions.last&.created_at
   end
@@ -99,11 +150,6 @@ class Dealer
     current_cards[human]
   end
 
-  # Later, will need to figure out how to make sure we count the pot
-  def total_chips_count
-    chip_counts.values.sum
-  end
-
   def actions
     @actions ||= game.actions.chronological.to_a
   end
@@ -115,10 +161,14 @@ class Dealer
     send("summarize_#{action.action}_for", action, human)
   end
 
+  def in_current_hand?(player)
+    current_cards.key?(player)
+  end
+
   private
 
-  attr_reader :game, :chip_counts, :current_cards
-  attr_writer :player_with_dealer_chip, :pot_size
+  attr_reader :game, :chip_counts, :current_cards, :action_to
+  attr_writer :player_with_dealer_chip, :pot_size, :action_to
 
   # The player after the dealer draws and bets first
   def current_players_in_dealing_order
@@ -127,6 +177,12 @@ class Dealer
       player.id == player_with_dealer_chip.id
     end) || raise
     players.rotate(dealer_position + 1)
+  end
+
+  def player_after(human)
+    players = current_players.to_a.select { |player| in_current_hand?(player) }
+    position = players.index(human)
+    players.rotate(position + 1).first
   end
 
   # Policy about who can start the game and when
@@ -144,6 +200,11 @@ class Dealer
   def can_join?(human)
     current_players.exclude?(human) &&
       current_players.count < MAX_PLAYERS
+  end
+
+  def can_bet?(amount, player)
+    chip_count_for(player) >= amount &&
+      action_to == player
   end
 
   def attendance_for(human)
@@ -173,6 +234,7 @@ class Dealer
     # TODO: will need to make sure to clear this whenever a hand ends
     @current_cards = {}
     @pot_size = 0
+    @action_to = nil
 
     visit_actions
   end
@@ -194,10 +256,29 @@ class Dealer
 
   def on_action_become_dealer(action)
     self.player_with_dealer_chip = action.human
+    self.action_to = current_players_in_dealing_order.first
   end
 
-  def on_action_draw(action)
-    current_cards[action.human] = CardDatabaseValue.to_card(action.value)
+  def on_action_bet(action)
+    self.pot_size += action.value
+    chip_counts[action.human.id] -= action.value
+
+    # FIXME: it's possible that, at this point, the hand is over, if I'm the
+    # last player to call a bet that was going around the table. So we need
+    # to check if that's the case, and if so, make that clear in the summary
+    # and move the money back to that player. Additionally, the dealer chip
+    # needs to move, and the action needs to move to the player after the
+    # dealer...
+
+    # if hand_is_over?
+    #   if game_is_over?
+
+    # else
+    #   # that player might be all-in, in which case we need to keep going
+    #   self.action_to = player_after(action.human)
+    # end
+
+    raise
   end
 
   def on_action_buy_in(action)
@@ -209,18 +290,42 @@ class Dealer
     chip_counts[action.human.id] += action.value
   end
 
+  def on_action_draw(action)
+    current_cards[action.human] = CardDatabaseValue.to_card(action.value)
+  end
+
   #### summarizers
 
-  def summarize_ante_for(action, _current_human)
-    "#{action.human.nickname} anted #{plural_chips action.value}"
+  def summarize_ante_for(action, current_human)
+    if action.human == current_human
+      'You'
+    else
+      action.human.nickname.to_s
+    end + " anted #{plural_chips action.value}"
   end
 
-  def summarize_become_dealer_for(action, _current_human)
-    "#{action.human.nickname} received the dealer chip"
+  def summarize_become_dealer_for(action, current_human)
+    if action.human == current_human
+      'You'
+    else
+      action.human.nickname.to_s
+    end + ' received the dealer chip'
   end
 
-  def summarize_buy_in_for(action, _current_human)
-    "#{action.human.nickname} joined with #{plural_chips action.value}"
+  def summarize_bet_for(action, current_human)
+    if action.human == current_human
+      'You'
+    else
+      action.human.nickname.to_s
+    end + " bet #{plural_chips(action.value)}"
+  end
+
+  def summarize_buy_in_for(action, current_human)
+    if action.human == current_human
+      'You'
+    else
+      action.human.nickname.to_s
+    end + " joined with #{plural_chips(action.value)}"
   end
 
   def summarize_draw_for(action, current_human)

@@ -3,6 +3,7 @@ module Api exposing
     , gameUrl
     , get
     , joinGameUrl
+    , placeBetUrl
     , post
     , profileUrl
     , put
@@ -26,6 +27,11 @@ gameUrl apiRoot gameId =
 joinGameUrl : String -> String -> String
 joinGameUrl apiRoot gameId =
     Url.Builder.crossOrigin apiRoot [ "games", gameId, "players" ++ ".json" ] []
+
+
+placeBetUrl : String -> String -> String
+placeBetUrl apiRoot gameId =
+    Url.Builder.crossOrigin apiRoot [ "games", gameId, "bets" ++ ".json" ] []
 
 
 profileUrl : String -> String

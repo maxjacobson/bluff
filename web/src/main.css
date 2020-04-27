@@ -38,6 +38,7 @@ body {
 .players-table {
   /* background-color: orange; */
   flex-grow: 3;
+  margin-right: 50px;
 }
 
 .game-actions {
@@ -48,9 +49,13 @@ body {
 
 .actions-list {
   /* background-color: green; */
-  height: 400px;
+  height: 200px;
   overflow-y: scroll;
   font-size: 26px;
+  border-left: 1px solid #9f9f9f;
+  border-bottom: 1px dashed #9f9f9f;
+  border-top: 1px dashed #9f9f9f;
+  padding-left: 50px;
 }
 
 .actions-list-item {
@@ -62,7 +67,8 @@ body {
   flex-grow: 1;
 }
 
-input[type="submit"] {
+input[type="submit"],
+input[type="number"] {
   font-size: 48px;
   border-radius: 10px;
   background-color: hsl(50, 92%, 57%);
@@ -177,6 +183,18 @@ th {
 .compact-card {
   background-color: white;
   padding: 0 5px;
-  width: 60px;
+  width: 85px;
   display: inline-block;
+}
+
+.player.not-in-hand {
+  background-color: rgb(186, 101, 235);
+}
+
+.players-table .piggy-bank {
+  width: 50px;
+}
+
+.action-buttons input[type="number"] {
+  width: 320px;
 }

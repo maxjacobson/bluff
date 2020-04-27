@@ -2,5 +2,5 @@
 
 set -e
 
-bin/lint
-bin/test
+# bin/lint
+# bin/test
