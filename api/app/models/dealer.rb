@@ -32,7 +32,7 @@ class Dealer
   # joining the game and getting their initial stack of chips. There's no
   # actual money involved, this is just for fun.
   def buy_in!(human)
-    return unless can_join?(human)
+    return unless can_buy_in?(human)
 
     ApplicationRecord.transaction do
       attendance = game.attendances.create_or_find_by!(human_id: human.id)
@@ -141,9 +141,10 @@ class Dealer
   # - Can a player re-join after resigning?
   # - Should there be a lower ceiling on players?
   # - Can a player join after the game has ended?
-  def can_join?(human)
+  def can_buy_in?(human)
     current_players.exclude?(human) &&
-      current_players.count < MAX_PLAYERS
+      current_players.count < MAX_PLAYERS &&
+      game.pending?
   end
 
   def attendance_for(human)

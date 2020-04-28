@@ -20,7 +20,11 @@ class Human < ApplicationRecord
   def record_heartbeat(game)
     if (attendance = game.attendances.find_by_human_id(id)).present?
       attendance.heartbeat!
+    elsif game.attendances.none?
+      # first human auto-buys-in
+      game.dealer.buy_in!(self)
     else
+      # other humans are just spectators
       game.attendances.create!(human_id: id)
     end
   end

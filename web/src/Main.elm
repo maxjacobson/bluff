@@ -946,7 +946,7 @@ view model =
                                 , a [ href "/" ] [ text "the home page" ]
                                 ]
                             , li [] [ text "Share the game link with your friends" ]
-                            , li [] [ text "Everyone who wants to play can then join the game (or you can just watch)" ]
+                            , li [] [ text "Everyone who wants to play can then join the game (or just watch)" ]
                             , li [] [ text "You get 100 chips when you join the game (there's no money involved here, this is just for fun)" ]
                             , li [] [ text "Each hand, you'll get just one card, and there's just one round of betting" ]
                             , li [] [ text "High card wins" ]
@@ -1194,7 +1194,7 @@ view model =
                                                                                 "Start game"
 
                                                                              else
-                                                                                "Waiting for two players to join..."
+                                                                                "Waiting for another player to join..."
                                                                             )
                                                                         , disabled (List.length gameResponse.gameData.players < 2)
                                                                         ]
@@ -1202,22 +1202,26 @@ view model =
                                                                     ]
 
                                                             ViewerRole ->
-                                                                text ""
+                                                                case gameResponse.human.role of
+                                                                    ViewerRole ->
+                                                                        input [ attribute "type" "submit", attribute "value" "Join!", onClick HumanWantsIn ]
+                                                                            []
+
+                                                                    PlayerRole ->
+                                                                        text ""
                                                         ]
                                                     ]
 
                                             Playing ->
-                                                p [] [ text "Gameplay actions to come here" ]
+                                                case gameResponse.human.role of
+                                                    PlayerRole ->
+                                                        p [] [ text "Gameplay actions to come here" ]
+
+                                                    ViewerRole ->
+                                                        p [] [ text "This space intentionally left blank" ]
 
                                             Complete ->
                                                 p [] [ text "Hope you had fun" ]
-                                        , case gameResponse.human.role of
-                                            ViewerRole ->
-                                                input [ attribute "type" "submit", attribute "value" "Join!", onClick HumanWantsIn ]
-                                                    []
-
-                                            PlayerRole ->
-                                                text ""
                                         ]
                                 )
                             ]
