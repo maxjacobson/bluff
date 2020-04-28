@@ -67,8 +67,13 @@ update msg model =
     case msg of
         SubmittedGoToGame ->
             case model.currentPage of
-                HomePage gameId ->
-                    ( model, Nav.pushUrl model.key (pathForGameId gameId) )
+                HomePage homePageModel ->
+                    case homePageModel of
+                        SuccessfullyRequested gameId ->
+                            ( model, Nav.pushUrl model.key (pathForGameId gameId) )
+
+                        _ ->
+                            ( model, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -120,10 +125,10 @@ update msg model =
                         HomePage _ ->
                             case result of
                                 Ok availableGameIdResponse ->
-                                    HomePage availableGameIdResponse
+                                    HomePage (SuccessfullyRequested availableGameIdResponse)
 
-                                _ ->
-                                    model.currentPage
+                                Err e ->
+                                    HomePage (FailedToRequest e)
 
                         _ ->
                             model.currentPage
@@ -307,7 +312,7 @@ type WebData response error
 
 
 type alias HomePageModel =
-    String
+    WebData String Http.Error
 
 
 type alias ProfilePageModel =
@@ -601,31 +606,28 @@ profileResponseDecoder =
 
 pageFromUrl : Url.Url -> Page
 pageFromUrl url =
-    case url.path of
-        "/" ->
-            HomePage ""
+    case gameIdFromUrl url of
+        Just gameId ->
+            case gameId of
+                "about" ->
+                    AboutPage
 
-        "/about" ->
-            AboutPage
+                "how-to-play" ->
+                    HowToPlayPage
 
-        "/how-to-play" ->
-            HowToPlayPage
-
-        "/profile" ->
-            ProfilePage
-                { profileResponse = WaitingForResponse
-                , newNickname = ""
-                , editingNickname = False
-                , currentlySavingNickname = False
-                }
-
-        _ ->
-            case gameIdFromUrl url of
-                Just gameId ->
-                    GamePage (GamePageModel WaitingForResponse gameId)
+                "profile" ->
+                    ProfilePage
+                        { profileResponse = WaitingForResponse
+                        , newNickname = ""
+                        , editingNickname = False
+                        , currentlySavingNickname = False
+                        }
 
                 _ ->
-                    HomePage ""
+                    GamePage (GamePageModel WaitingForResponse gameId)
+
+        Nothing ->
+            HomePage WaitingForResponse
 
 
 gameIdFromUrl : Url.Url -> Maybe String
@@ -1065,9 +1067,26 @@ view model =
                             FailedToRequest _ ->
                                 [ p [] [ text "Whoops, couldn't load your profile. Look, all I can say is I'm sorry." ] ]
 
-                    HomePage gameId ->
+                    HomePage homePageModel ->
+                        let
+                            ( isDisabled, buttonText ) =
+                                case homePageModel of
+                                    SuccessfullyRequested _ ->
+                                        ( False, "New game" )
+
+                                    FailedToRequest _ ->
+                                        ( True, "Eeep" )
+
+                                    WaitingForResponse ->
+                                        ( True, "Wait for it..." )
+                        in
                         [ form [ onSubmit SubmittedGoToGame ]
-                            [ input [ attribute "type" "submit", attribute "value" "New game", disabled (String.isEmpty gameId) ] []
+                            [ input
+                                [ attribute "type" "submit"
+                                , attribute "value" buttonText
+                                , disabled isDisabled
+                                ]
+                                []
                             ]
                         ]
 
