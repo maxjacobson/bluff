@@ -3,64 +3,12 @@
 An online version of [Blind Man's Bluff](<https://en.wikipedia.org/wiki/Blind_man%27s_bluff_(poker)>).
 
 A work in progress.
-See <https://github.com/maxjacobson/bluff/projects/1>
+See the GH project for the current state: <https://github.com/maxjacobson/bluff/projects/1>
 
-## Architecture overview
+## Overview
 
-### ./api
-
-The backend is a Rails API.
-
-Setup:
-
-```
-cd api
-bundle install
-rails db:setup
-```
-
-Boot:
-
-```
-rails s
-```
-
-Deploy:
-
-```
-git remote add heroku https://git.heroku.com/bluff-api.git
-bin/deploy-api
-```
-
-URL:
-
-<https://bluff-api.herokuapp.com>
-
-### ./web
-
-The frontend is an Elm app.
-
-Setup:
-
-```
-npm install -g create-elm-app
-```
-
-Boot:
-
-```
-cd web
-PORT=3001 elm-app start
-```
-
-Deploy:
-
-Just push to GitHub, and Netlify will take care of it.
-
-URLs:
-
-- <https://bluff.netlify.app>
-- <https://www.bluff.website>
+- There's a Rails API-only backend: [api/](./api#readme)
+- There's an Elm front-end: [web/](./web/#readme)
 
 ## Scripting
 
