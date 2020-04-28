@@ -270,7 +270,7 @@ class Dealer
     # needs to move, and the action needs to move to the player after the
     # dealer...
 
-    # if hand_is_over?
+    # if Hand.new(chips_in_post).is_over? ehhh
     #   if game_is_over?
 
     # else
