@@ -925,6 +925,18 @@ viewCard card =
         ]
 
 
+relativeTimeInPast : Time.Posix -> Time.Posix -> String
+relativeTimeInPast currentTime otherTime =
+    if Time.posixToMillis currentTime > Time.posixToMillis otherTime then
+        DateFormat.Relative.relativeTime currentTime otherTime
+
+    else
+        -- because we refresh model.currentTime every two seconds, sometimes it's
+        -- two seconds off. This just makes sure that we don't get confused and
+        -- say that something happened in the future
+        "just now"
+
+
 
 ---- Main view function
 
@@ -1055,7 +1067,7 @@ view model =
                                                         (\game ->
                                                             tr []
                                                                 [ td [] [ a [ href (pathForGameId game.identifier) ] [ text game.identifier ] ]
-                                                                , td [] [ text (DateFormat.Relative.relativeTime model.currentTime game.lastActionAt) ]
+                                                                , td [] [ text (relativeTimeInPast model.currentTime game.lastActionAt) ]
                                                                 ]
                                                         )
                                                         response.games
@@ -1165,7 +1177,7 @@ view model =
                                             List.map
                                                 (\action ->
                                                     div [ class "actions-list-item" ]
-                                                        [ div [] [ text (DateFormat.Relative.relativeTime model.currentTime action.time) ]
+                                                        [ div [] [ text (relativeTimeInPast model.currentTime action.time) ]
                                                         , div [] [ text action.summary ]
                                                         ]
                                                 )
