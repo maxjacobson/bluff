@@ -99,11 +99,6 @@ class Dealer
     current_cards[human]
   end
 
-  # Later, will need to figure out how to make sure we count the pot
-  def total_chips_count
-    chip_counts.values.sum
-  end
-
   def actions
     @actions ||= game.actions.chronological.to_a
   end

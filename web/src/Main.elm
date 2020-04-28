@@ -352,8 +352,6 @@ type alias ProfileResponse =
 type alias GameData =
     { identifier : String
     , lastActionAt : Time.Posix
-    , spectatorCount : Int
-    , totalChipsCount : Int
     , status : GameStatus
     , players : List Player
     , currentDealerId : Maybe Int
@@ -528,11 +526,9 @@ actionDecoder =
 
 gameDataDecoder : Decoder GameData
 gameDataDecoder =
-    D.map8 GameData
+    D.map6 GameData
         (D.field "id" D.string)
         (D.field "last_action_at" D.int |> D.andThen posixDecoder)
-        (D.field "spectators_count" D.int)
-        (D.field "total_chips_count" D.int)
         (D.field "status" D.string |> D.andThen gameStatusDecoder)
         (D.field "players" (D.list playerDecoder))
         (D.field "current_dealer_id" (D.nullable D.int))
