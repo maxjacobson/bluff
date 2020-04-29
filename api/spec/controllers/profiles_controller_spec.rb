@@ -67,7 +67,8 @@ RSpec.describe ProfilesController do
                   'nickname' => other_human.nickname,
                   'current_card' => nil
                 }],
-                'status' => 'pending'
+                'status' => 'pending',
+                'pot_size' => 0
               }
             ]
           )

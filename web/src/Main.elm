@@ -356,6 +356,7 @@ type alias GameData =
     , players : List Player
     , currentDealerId : Maybe Int
     , actions : List Action
+    , potSize : Int
     }
 
 
@@ -526,13 +527,14 @@ actionDecoder =
 
 gameDataDecoder : Decoder GameData
 gameDataDecoder =
-    D.map6 GameData
+    D.map7 GameData
         (D.field "id" D.string)
         (D.field "last_action_at" D.int |> D.andThen posixDecoder)
         (D.field "status" D.string |> D.andThen gameStatusDecoder)
         (D.field "players" (D.list playerDecoder))
         (D.field "current_dealer_id" (D.nullable D.int))
         (D.field "actions" (D.list actionDecoder))
+        (D.field "pot_size" D.int)
 
 
 roleDecoder : String -> Decoder Role
@@ -933,6 +935,20 @@ relativeTimeInPast currentTime otherTime =
         "just now"
 
 
+pluralizeWord : String -> Int -> String
+pluralizeWord word num =
+    if num == 1 then
+        "1 " ++ word
+
+    else
+        String.fromInt num ++ " " ++ word ++ "s"
+
+
+pluralizeChips : Int -> String
+pluralizeChips num =
+    pluralizeWord "chip" num
+
+
 
 ---- Main view function
 
@@ -1100,12 +1116,17 @@ view model =
 
                     GamePage gamePageModel ->
                         [ div [ class "players-table" ]
-                            [ case gamePageModel.gameResponse of
+                            (case gamePageModel.gameResponse of
                                 FailedToRequest _ ->
-                                    text "Whooooops"
+                                    [ text "Whooooops" ]
 
                                 SuccessfullyRequested response ->
-                                    table []
+                                    [ p []
+                                        [ Icon.piggyBank
+                                        , text (" " ++ pluralizeChips response.gameData.potSize)
+                                        , text " on the table."
+                                        ]
+                                    , table []
                                         [ thead []
                                             [ tr []
                                                 [ th [] [ text "Player" ]
@@ -1152,10 +1173,11 @@ view model =
                                                 response.gameData.players
                                             )
                                         ]
+                                    ]
 
                                 WaitingForResponse ->
-                                    text "Loading..."
-                            ]
+                                    [ text "Loading..." ]
+                            )
                         , div [ class "game-actions" ]
                             [ div [ class "actions-list" ]
                                 (case gamePageModel.gameResponse of

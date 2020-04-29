@@ -12,3 +12,4 @@ json.actions game.dealer.actions.reverse,
              partial: 'games/action',
              as: :action,
              locals: { dealer: game.dealer }
+json.pot_size game.dealer.pot_size
