@@ -53,7 +53,7 @@ class Dealer
     current_cards[human]
   end
 
-  def in_next_hand?(human)
+  def waiting_for_next_hand?(human)
     players_to_join_next_hand.include?(human)
   end
 

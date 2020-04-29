@@ -61,14 +61,14 @@ RSpec.describe ProfilesController do
                   'chips_count' => 100,
                   'nickname' => human.nickname,
                   'current_card' => nil,
-                  'in_next_hand' => true,
+                  'waiting_for_next_hand' => true,
                   'all_out' => false
                 }, {
                   'id' => other_human.id,
                   'chips_count' => 100,
                   'nickname' => other_human.nickname,
                   'current_card' => nil,
-                  'in_next_hand' => true,
+                  'waiting_for_next_hand' => true,
                   'all_out' => false
                 }],
                 'status' => 'pending',

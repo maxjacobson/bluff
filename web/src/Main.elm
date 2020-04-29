@@ -400,7 +400,7 @@ type alias Player =
     , nickname : String
     , chipsCount : Int
     , currentCard : Maybe Card
-    , inNextHand : Bool
+    , waitingForNextHand : Bool
     , allOut : Bool
     }
 
@@ -518,7 +518,7 @@ playerDecoder =
         (D.field "nickname" D.string)
         (D.field "chips_count" D.int)
         (D.field "current_card" currentCardDecoder)
-        (D.field "in_next_hand" D.bool)
+        (D.field "waiting_for_next_hand" D.bool)
         (D.field "all_out" D.bool)
 
 
@@ -1150,7 +1150,7 @@ view model =
                                                                     [ text "" ]
                                                                 )
                                                             , span []
-                                                                (if player.inNextHand then
+                                                                (if player.waitingForNextHand then
                                                                     [ Icon.load "This player will be in the next hand." ]
 
                                                                  else
