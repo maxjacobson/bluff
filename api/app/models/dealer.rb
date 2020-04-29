@@ -141,16 +141,19 @@ class Dealer
 
   #### summarizers
 
-  def summarize_ante_for(action, _current_human)
-    "#{action.human.nickname} anted #{plural_chips action.value}"
+  def summarize_ante_for(action, current_human)
+    actor = action_summary_actor(action, current_human)
+    "#{actor} anted #{plural_chips action.value}"
   end
 
-  def summarize_become_dealer_for(action, _current_human)
-    "#{action.human.nickname} received the dealer chip"
+  def summarize_become_dealer_for(action, current_human)
+    actor = action_summary_actor(action, current_human)
+    "#{actor} received the dealer chip"
   end
 
-  def summarize_buy_in_for(action, _current_human)
-    "#{action.human.nickname} joined with #{plural_chips action.value}"
+  def summarize_buy_in_for(action, current_human)
+    actor = action_summary_actor(action, current_human)
+    "#{actor} joined with #{plural_chips action.value}"
   end
 
   def summarize_draw_for(action, current_human)
@@ -159,6 +162,14 @@ class Dealer
     else
       "#{action.human.nickname} drew the " \
       "#{CardDatabaseValue.to_card(action.value)}"
+    end
+  end
+
+  def action_summary_actor(action, current_human)
+    if action.human == current_human
+      'You'
+    else
+      action.human.nickname
     end
   end
 
