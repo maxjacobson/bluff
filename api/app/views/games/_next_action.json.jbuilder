@@ -29,4 +29,6 @@ if player.present?
   json.fold do
     json.available dealer.can_fold?(player)
   end
+else
+  json.null!
 end

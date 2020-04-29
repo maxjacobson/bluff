@@ -56,6 +56,7 @@ RSpec.describe ProfilesController do
                 ],
                 'last_action_at' => Millis.new(game.last_action_at).to_i,
                 'current_dealer_id' => nil,
+                'next_action' => nil,
                 'players' => [{
                   'id' => human.id,
                   'chips_count' => 100,
