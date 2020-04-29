@@ -832,6 +832,11 @@ greaterThanMinutesPassedBetween minutes a b =
     not (fewerThanMinutesPassedBetween minutes a b)
 
 
+onNthSecond : Int -> Time.Posix -> Bool
+onNthSecond n time =
+    ((Time.posixToMillis time // 1000) |> modBy n) == 0
+
+
 pollingCmd : Page -> Flags -> Time.Posix -> Cmd Msg
 pollingCmd page flags currentTime =
     let
@@ -840,12 +845,14 @@ pollingCmd page flags currentTime =
                 GamePage gamePageModel ->
                     case gamePageModel.gameResponse of
                         SuccessfullyRequested gameResponse ->
-                            if fewerThanMinutesPassedBetween 5 gameResponse.gameData.lastActionAt currentTime then
-                                -- Keep polling, because the game is active!
+                            if fewerThanMinutesPassedBetween 2 gameResponse.gameData.lastActionAt currentTime && onNthSecond 2 currentTime then
+                                -- Keep polling every two seconds, because the game is active!
                                 cmdWhenLoadingPage page flags
 
-                            else if greaterThanMinutesPassedBetween 2 gameResponse.human.heartbeatAt currentTime then
-                                -- Keep polling, because we haven't checked in a while
+                            else if greaterThanMinutesPassedBetween 2 gameResponse.human.heartbeatAt currentTime && onNthSecond 5 currentTime then
+                                -- Keep polling, because we haven't checked in a while.
+                                -- If the game remains inactive, we'll keep polling approx every 5 minutes.
+                                -- If it becomes active (or the player refreshes), we'll resume polling more frequently.
                                 cmdWhenLoadingPage page flags
 
                             else
@@ -886,7 +893,7 @@ init flags url key =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Time.every 2000 Tick
+    Time.every 1000 Tick
 
 
 
