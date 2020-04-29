@@ -22,11 +22,19 @@ body {
   display: flex;
 }
 
-.home-page {
+/* .page-content.home-page {
   display: flex;
-  flex: 1;
-  justify-content: center;
+  justify-content: space-evenly;
+} */
+
+.home-page > div {
+  flex-grow: 1;
+}
+
+.home-page > div:first-child {
   align-items: center;
+  justify-content: center;
+  display: flex;
 }
 
 .page-content.game-page {

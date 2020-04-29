@@ -11,10 +11,7 @@ class Human < ApplicationRecord
   def self.recognize(uuid)
     return if uuid.blank?
 
-    find_by_uuid(uuid) || create!(
-      uuid: uuid,
-      nickname: RandomNickname.new.to_s
-    )
+    create_with(nickname: RandomNickname.new.to_s).create_or_find_by(uuid: uuid)
   end
 
   def record_heartbeat(game)
