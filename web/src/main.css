@@ -216,3 +216,9 @@ th {
 .players-table .piggy-bank {
   width: 50px;
 }
+
+.how-to-play-page,
+.about-page {
+  max-width: 820px;
+  margin: 0 auto;
+}
