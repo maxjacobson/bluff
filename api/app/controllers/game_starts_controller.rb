@@ -7,7 +7,7 @@ class GameStartsController < ApplicationController
 
     @game = Game.find_by!(identifier: params.require(:game_id))
 
-    @game.dealer.start!(current_human)
+    @game.action_creator.start!(current_human)
 
     render status: :created
   end

@@ -4,9 +4,6 @@
 # of the state of the world.
 class Dealer
   DEFAULT_ANTE_AMOUNT = 5
-  DEFAULT_INITIAL_CHIP_AMOUNT = 100
-  MIN_PLAYERS = 2 # no fun to play by yourself
-  MAX_PLAYERS = 52 # that's all the cards that exist to go around
 
   # The people currently playing, in the order they're sitting around the table
   attr_reader :current_players
@@ -19,64 +16,22 @@ class Dealer
   # How many chips are currently sitting in the middle of the table
   attr_reader :pot_size
 
+  attr_reader :status
+
   def initialize(game)
     @game = game
-    appraise_situation
-  end
+    @actions = nil # bust memoization
+    @current_players = SortedSet.new
+    @players_to_join_next_hand = Set.new
+    @players_who_are_out = Set.new
+    @current_dealer = nil
+    @chip_counts = {}
+    # TODO: will need to make sure to clear this whenever a hand ends
+    @current_cards = {}
+    @pot_size = 0
+    @status = GameStatus::PENDING
 
-  def can_become_dealer?(human)
-    current_players.include?(human)
-  end
-
-  # Records a GameAction of action = 'buy_in'. That action represents a player
-  # joining the game and getting their initial stack of chips. There's no
-  # actual money involved, this is just for fun.
-  def buy_in!(human)
-    return unless can_buy_in?(human)
-
-    ApplicationRecord.transaction do
-      attendance = game.attendances.create_or_find_by!(human_id: human.id)
-
-      GameAction.create!(
-        attendance: attendance,
-        action: 'buy_in',
-        value: DEFAULT_INITIAL_CHIP_AMOUNT
-      )
-      reappraise_situation
-    end
-  end
-
-  def start!(requested_by_human)
-    return unless can_start?(requested_by_human)
-
-    ApplicationRecord.transaction do
-      game.playing!
-
-      GameAction.create!(
-        attendance: attendance_for(current_players.to_a.sample),
-        action: 'become_dealer'
-      )
-      reappraise_situation
-
-      current_players.each do |player|
-        GameAction.create!(
-          attendance: attendance_for(player),
-          action: 'ante',
-          value: current_ante_amount_for(player)
-        )
-      end
-
-      deck = DeckOfCards.new.shuffle
-
-      current_players_in_dealing_order.each do |player|
-        GameAction.create!(
-          attendance: attendance_for(player),
-          action: 'draw',
-          value: deck.draw.to_i
-        )
-      end
-      reappraise_situation
-    end
+    visit_actions
   end
 
   def latest_action_at
@@ -84,7 +39,7 @@ class Dealer
   end
 
   def role(human)
-    if current_players.include?(human)
+    if current_members.include?(human)
       'player'
     else
       'viewer'
@@ -99,6 +54,10 @@ class Dealer
     current_cards[human]
   end
 
+  def in_next_hand?(human)
+    players_to_join_next_hand.include?(human)
+  end
+
   def actions
     @actions ||= game.actions.chronological.to_a
   end
@@ -110,39 +69,9 @@ class Dealer
     send("summarize_#{action.action}_for", action, human)
   end
 
-  private
-
-  attr_reader :game, :chip_counts, :current_cards
-  attr_writer :player_with_dealer_chip, :pot_size
-
-  # The player after the dealer draws and bets first
-  def current_players_in_dealing_order
-    players = current_players.to_a
-    (dealer_position = players.index do |player|
-      player.id == player_with_dealer_chip.id
-    end) || raise
-    players.rotate(dealer_position + 1)
-  end
-
-  # Policy about who can start the game and when
-  def can_start?(human)
-    current_players.include?(human) &&
-      current_players.count >= MIN_PLAYERS &&
-      game.pending?
-  end
-
-  # Some nuances to consider later:
-  #
-  # - Can a player re-join after resigning?
-  # - Should there be a lower ceiling on players?
-  # - Can a player join after the game has ended?
-  def can_buy_in?(human)
-    current_players.exclude?(human) &&
-      current_players.count < MAX_PLAYERS
-  end
-
-  def attendance_for(human)
-    game.attendances.detect { |a| a.human_id == human.id } || raise
+  # This is the set of people who are part of the game
+  def current_members
+    current_players + players_to_join_next_hand + players_who_are_out
   end
 
   def current_ante_amount_for(_player)
@@ -158,21 +87,22 @@ class Dealer
     DEFAULT_ANTE_AMOUNT
   end
 
-  ##### visitor helpers
-
-  def appraise_situation
-    @actions = nil # bust memoization
-    @current_players = SortedSet.new
-    @current_dealer = nil
-    @chip_counts = {}
-    # TODO: will need to make sure to clear this whenever a hand ends
-    @current_cards = {}
-    @pot_size = 0
-
-    visit_actions
+  # The player after the dealer draws and bets first
+  def current_players_in_dealing_order
+    players = current_players.to_a
+    (dealer_position = players.index do |player|
+      player.id == player_with_dealer_chip.id
+    end) || raise
+    players.rotate(dealer_position + 1)
   end
 
-  alias reappraise_situation appraise_situation
+  private
+
+  attr_reader :game, :chip_counts, :current_cards, :players_to_join_next_hand,
+              :players_who_are_out
+  attr_writer :player_with_dealer_chip, :pot_size
+
+  ##### visitor helpers
 
   # Replay history from beginning to end to figure out where we stand now
   def visit_actions
@@ -189,15 +119,20 @@ class Dealer
 
   def on_action_become_dealer(action)
     self.player_with_dealer_chip = action.human
+
+    players_to_join_next_hand.to_a.each do |player|
+      current_players.add(player)
+      players_to_join_next_hand.delete(player)
+    end
   end
 
   def on_action_draw(action)
+    @status = GameStatus::PLAYING
     current_cards[action.human] = CardDatabaseValue.to_card(action.value)
   end
 
   def on_action_buy_in(action)
-    # This human bought in, seems like they're playing
-    current_players.add(action.human)
+    players_to_join_next_hand.add(action.human)
 
     # This human bought in with a certain number of chips
     chip_counts[action.human.id] ||= 0

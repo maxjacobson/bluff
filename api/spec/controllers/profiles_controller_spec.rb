@@ -30,8 +30,8 @@ RSpec.describe ProfilesController do
       let(:other_human) { create_human }
 
       before do
-        game.dealer.buy_in!(human)
-        game.dealer.buy_in!(other_human)
+        game.action_creator.buy_in!(human)
+        game.action_creator.buy_in!(other_human)
       end
 
       it 'shows their games' do
@@ -60,12 +60,14 @@ RSpec.describe ProfilesController do
                   'id' => human.id,
                   'chips_count' => 100,
                   'nickname' => human.nickname,
-                  'current_card' => nil
+                  'current_card' => nil,
+                  'in_next_hand' => true
                 }, {
                   'id' => other_human.id,
                   'chips_count' => 100,
                   'nickname' => other_human.nickname,
-                  'current_card' => nil
+                  'current_card' => nil,
+                  'in_next_hand' => true
                 }],
                 'status' => 'pending',
                 'pot_size' => 0

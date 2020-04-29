@@ -6,12 +6,6 @@ class Game < ApplicationRecord
   has_many :humans, through: :attendances
   has_many :actions, through: :attendances, source: :actions
 
-  enum status: {
-    pending: 'pending',
-    playing: 'playing',
-    complete: 'complete'
-  }
-
   def self.available_identifier
     count = 0
     loop do
@@ -26,6 +20,10 @@ class Game < ApplicationRecord
 
   def dealer
     Dealer.new(self)
+  end
+
+  def action_creator
+    GameActionCreator.new(self)
   end
 
   def last_action_at

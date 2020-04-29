@@ -400,6 +400,7 @@ type alias Player =
     , nickname : String
     , chipsCount : Int
     , currentCard : Maybe Card
+    , inNextHand : Bool
     }
 
 
@@ -511,11 +512,12 @@ currentCardDecoder =
 
 playerDecoder : Decoder Player
 playerDecoder =
-    D.map4 Player
+    D.map5 Player
         (D.field "id" D.int)
         (D.field "nickname" D.string)
         (D.field "chips_count" D.int)
         (D.field "current_card" currentCardDecoder)
+        (D.field "in_next_hand" D.bool)
 
 
 actionDecoder : Decoder Action
@@ -811,7 +813,7 @@ viewHeader page =
                     True
 
         headerChildren =
-            [ Icon.closedEye
+            [ Icon.closedEye "Bluff"
             , h1 []
                 [ text "Bluff"
                 ]
@@ -1004,13 +1006,15 @@ view model =
                                 ]
                             , ul [ class "icons-credits" ]
                                 [ li []
-                                    [ a [ href "https://www.toicon.com/icons/avocado_save", target "_blank" ] [ Icon.piggyBank ]
+                                    [ a [ href "https://www.toicon.com/icons/avocado_save", target "_blank" ] [ Icon.piggyBank "A very nice looking piggy bank icon" ]
                                     ]
                                 , li []
-                                    [ a [ href "https://www.toicon.com/icons/hatch_hide", target "_blank" ] [ Icon.closedEye ]
+                                    [ a [ href "https://www.toicon.com/icons/hatch_hide", target "_blank" ] [ Icon.closedEye "A very nice looking closed eye icon" ]
                                     ]
                                 , li []
                                     [ a [ href "https://www.toicon.com/icons/afiado_go", target "_blank" ] [ Icon.arrowRight "A very nice looking arrow icon" ] ]
+                                , li []
+                                    [ a [ href "https://www.toicon.com/icons/avocado_load", target "_blank" ] [ Icon.load "A very nice looking loading icon" ] ]
                                 ]
                             , p []
                                 [ text "This is my first time using "
@@ -1122,7 +1126,7 @@ view model =
 
                                 SuccessfullyRequested response ->
                                     [ p []
-                                        [ Icon.piggyBank
+                                        [ Icon.piggyBank "The pot"
                                         , text (" " ++ pluralizeChips response.gameData.potSize)
                                         , text " on the table."
                                         ]
@@ -1142,6 +1146,13 @@ view model =
                                                             [ span []
                                                                 (if response.gameData.currentDealerId == Just player.id then
                                                                     [ Icon.arrowRight "This player is the dealer. That just means the player after them bets first." ]
+
+                                                                 else
+                                                                    [ text "" ]
+                                                                )
+                                                            , span []
+                                                                (if player.inNextHand then
+                                                                    [ Icon.load "This player will be in the next hand." ]
 
                                                                  else
                                                                     [ text "" ]

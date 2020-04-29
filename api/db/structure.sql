@@ -25,17 +25,6 @@ CREATE TYPE public.game_action AS ENUM (
 );
 
 
---
--- Name: game_status; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.game_status AS ENUM (
-    'pending',
-    'playing',
-    'complete'
-);
-
-
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -126,8 +115,7 @@ CREATE TABLE public.games (
     id bigint NOT NULL,
     identifier character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    status public.game_status DEFAULT 'pending'::public.game_status NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -349,6 +337,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20200424213458'),
 ('20200424232610'),
 ('20200424233710'),
-('20200425042407');
+('20200425042407'),
+('20200429004515');
 
 

@@ -1,19 +1,24 @@
-module Icon exposing (arrowRight, closedEye, piggyBank)
+module Icon exposing (arrowRight, closedEye, load, piggyBank)
 
 import Html exposing (img)
 import Html.Attributes exposing (src, title)
 
 
 arrowRight : String -> Html.Html m
-arrowRight altText =
-    img [ src "/icons/arrow-right.svg", title altText ] []
+arrowRight titleText =
+    img [ src "/icons/arrow-right.svg", title titleText ] []
 
 
-closedEye : Html.Html m
-closedEye =
-    img [ src "/icons/closed-eye.svg" ] []
+closedEye : String -> Html.Html m
+closedEye titleText =
+    img [ src "/icons/closed-eye.svg", title titleText ] []
 
 
-piggyBank : Html.Html m
-piggyBank =
-    img [ src "/icons/piggy-bank.svg" ] []
+load : String -> Html.Html m
+load titleText =
+    img [ src "/icons/load.svg", title titleText ] []
+
+
+piggyBank : String -> Html.Html m
+piggyBank titleText =
+    img [ src "/icons/piggy-bank.svg", title titleText ] []

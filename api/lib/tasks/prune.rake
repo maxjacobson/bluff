@@ -14,18 +14,18 @@ namespace :prune do
       if game.last_action_at > CUTOFF.ago
         logger.info "Preserving fresh game id=#{game.id}" \
                     "last_action_at=#{game.last_action_at} " \
-                    "status=#{game.status}"
+                    "status=#{game.dealer.status}"
         next
       end
 
-      if game.complete?
+      if game.dealer.status.complete?
         logger.info "Preserving complete game id=#{game.id}"
         next
       end
 
       logger.info "Deleting stale game id=#{game.id} " \
                   "last_action_at=#{game.last_action_at} " \
-                  "status=#{game.status}"
+                  "status=#{game.dealer.status}"
 
       # This will cascade and destroy all of the attendances and actions, too.
       game.destroy

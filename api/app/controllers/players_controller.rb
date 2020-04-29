@@ -7,7 +7,7 @@ class PlayersController < ApplicationController
     authorize! { current_human.present? }
 
     @game = Game.find_by!(identifier: params.require(:game_id))
-    @game.dealer.buy_in!(current_human)
+    @game.action_creator.buy_in!(current_human)
 
     render status: :created
   end

@@ -13,3 +13,5 @@ json.current_card(if card.present? && player != current_human
                       suit: card.suit
                     }
                   end)
+
+json.in_next_hand dealer.in_next_hand?(player)
