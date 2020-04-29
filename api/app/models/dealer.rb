@@ -26,7 +26,6 @@ class Dealer
     @players_who_are_out = Set.new
     @current_dealer = nil
     @chip_counts = {}
-    # TODO: will need to make sure to clear this whenever a hand ends
     @current_cards = {}
     @pot_size = 0
     @status = GameStatus::PENDING
@@ -117,6 +116,7 @@ class Dealer
     chip_counts[action.human.id] -= action.value
   end
 
+  # If this action happens, it means we're starting a fresh hand
   def on_action_become_dealer(action)
     self.player_with_dealer_chip = action.human
 
@@ -124,6 +124,9 @@ class Dealer
       current_players.add(player)
       players_to_join_next_hand.delete(player)
     end
+
+    current_cards.clear
+    self.pot_size = 0
   end
 
   def on_action_draw(action)
