@@ -1070,19 +1070,22 @@ view model =
             , div [ class "page-content", class (pageContentClassFor model.currentPage) ]
                 (case model.currentPage of
                     HowToPlayPage ->
-                        [ p [] [ text "Bluff is a fun, simple version of poker. Here's what you do." ]
+                        [ p []
+                            [ text "Bluff is an online version of "
+                            , a [ href "https://en.wikipedia.org/wiki/Blind_man%27s_bluff_(poker)", target "_blank" ] [ text "Blind Man's Bluff" ]
+                            , text ", a version of poker where you only get one card and you can see everyone's card but your own."
+                            ]
+                        , p []
+                            [ text "Here's what you do:"
+                            ]
                         , ol []
-                            [ li [] [ text "Gather some friends on a zoom call" ]
+                            [ li [] [ text "Gather some friends on a telephone call" ]
                             , li []
                                 [ text "Start a new game from "
                                 , a [ href "/" ] [ text "the home page" ]
                                 ]
-                            , li [] [ text "Share the game link with your friends" ]
-                            , li [] [ text "Everyone who wants to play can then join the game (or just watch)" ]
-                            , li [] [ text "You get 100 chips when you join the game (there's no money involved here, this is just for fun)" ]
-                            , li [] [ text "Each hand, you'll get just one card, and there's just one round of betting" ]
-                            , li [] [ text "High card wins" ]
-                            , li [] [ text "You can see everyone's card but your own" ]
+                            , li [] [ text "Share the URL with your friends" ]
+                            , li [] [ text "Play some hands" ]
                             ]
                         ]
 
