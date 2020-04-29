@@ -136,6 +136,16 @@ footer li:not(:first-child)::before {
   content: "• ";
 }
 
+.icons-credits {
+  list-style-type: none;
+  padding: 0;
+  display: inline;
+}
+
+.icons-credits li {
+  display: inline;
+}
+
 .icons-credits img {
   width: 70px;
 }

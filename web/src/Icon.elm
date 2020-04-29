@@ -1,4 +1,4 @@
-module Icon exposing (arrowRight, closedEye, load, piggyBank)
+module Icon exposing (arrowRight, closedEye, load, piggyBank, skull)
 
 import Html exposing (img)
 import Html.Attributes exposing (src, title)
@@ -12,6 +12,11 @@ arrowRight titleText =
 closedEye : String -> Html.Html m
 closedEye titleText =
     img [ src "/icons/closed-eye.svg", title titleText ] []
+
+
+skull : String -> Html.Html m
+skull titleText =
+    img [ src "/icons/skull.svg", title titleText ] []
 
 
 load : String -> Html.Html m

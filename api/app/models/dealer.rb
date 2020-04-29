@@ -57,6 +57,10 @@ class Dealer
     players_to_join_next_hand.include?(human)
   end
 
+  def all_out?(human)
+    players_who_are_out.include?(human)
+  end
+
   def actions
     @actions ||= game.actions.chronological.to_a
   end

@@ -15,3 +15,4 @@ json.current_card(if card.present? && player != current_human
                   end)
 
 json.in_next_hand dealer.in_next_hand?(player)
+json.all_out dealer.all_out?(player)

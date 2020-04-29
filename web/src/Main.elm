@@ -401,6 +401,7 @@ type alias Player =
     , chipsCount : Int
     , currentCard : Maybe Card
     , inNextHand : Bool
+    , allOut : Bool
     }
 
 
@@ -512,12 +513,13 @@ currentCardDecoder =
 
 playerDecoder : Decoder Player
 playerDecoder =
-    D.map5 Player
+    D.map6 Player
         (D.field "id" D.int)
         (D.field "nickname" D.string)
         (D.field "chips_count" D.int)
         (D.field "current_card" currentCardDecoder)
         (D.field "in_next_hand" D.bool)
+        (D.field "all_out" D.bool)
 
 
 actionDecoder : Decoder Action
@@ -1003,23 +1005,20 @@ view model =
                                 [ text "These icons are from "
                                 , a [ href "https://www.toicon.com/about", target "_blank" ] [ strong [] [ text "to [icon]" ] ]
                                 , text ":"
-                                ]
-                            , ul [ class "icons-credits" ]
-                                [ li []
-                                    [ a [ href "https://www.toicon.com/icons/avocado_save", target "_blank" ] [ Icon.piggyBank "A very nice looking piggy bank icon" ]
+                                , ul [ class "icons-credits" ]
+                                    [ li []
+                                        [ a [ href "https://www.toicon.com/icons/avocado_save", target "_blank" ] [ Icon.piggyBank "A very nice looking piggy bank icon" ]
+                                        ]
+                                    , li []
+                                        [ a [ href "https://www.toicon.com/icons/hatch_hide", target "_blank" ] [ Icon.closedEye "A very nice looking closed eye icon" ]
+                                        ]
+                                    , li []
+                                        [ a [ href "https://www.toicon.com/icons/afiado_go", target "_blank" ] [ Icon.arrowRight "A very nice looking arrow icon" ] ]
+                                    , li []
+                                        [ a [ href "https://www.toicon.com/icons/avocado_load", target "_blank" ] [ Icon.load "A very nice looking loading icon" ] ]
+                                    , li []
+                                        [ a [ href "https://www.toicon.com/icons/avocado_die", target "_blank" ] [ Icon.skull "A very nice looking skull icon" ] ]
                                     ]
-                                , li []
-                                    [ a [ href "https://www.toicon.com/icons/hatch_hide", target "_blank" ] [ Icon.closedEye "A very nice looking closed eye icon" ]
-                                    ]
-                                , li []
-                                    [ a [ href "https://www.toicon.com/icons/afiado_go", target "_blank" ] [ Icon.arrowRight "A very nice looking arrow icon" ] ]
-                                , li []
-                                    [ a [ href "https://www.toicon.com/icons/avocado_load", target "_blank" ] [ Icon.load "A very nice looking loading icon" ] ]
-                                ]
-                            , p []
-                                [ text "This is my first time using "
-                                , strong [] [ text "to [icon]" ]
-                                , text ". It didn't have what I was looking for (an icon of some poker chips) but I liked what it had, better."
                                 ]
                             ]
                         ]
@@ -1153,6 +1152,13 @@ view model =
                                                             , span []
                                                                 (if player.inNextHand then
                                                                     [ Icon.load "This player will be in the next hand." ]
+
+                                                                 else
+                                                                    [ text "" ]
+                                                                )
+                                                            , span []
+                                                                (if player.allOut then
+                                                                    [ Icon.skull "This player is all out." ]
 
                                                                  else
                                                                     [ text "" ]
