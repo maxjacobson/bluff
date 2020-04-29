@@ -983,7 +983,7 @@ view model =
                             [ h2 [] [ text "Credits" ]
                             , p []
                                 [ text "These icons are from "
-                                , a [ href "https://www.toicon.com/about" ] [ strong [] [ text "to [icon]" ] ]
+                                , a [ href "https://www.toicon.com/about", target "_blank" ] [ strong [] [ text "to [icon]" ] ]
                                 , text ":"
                                 ]
                             , ul [ class "icons-credits" ]
