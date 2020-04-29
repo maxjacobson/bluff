@@ -1232,26 +1232,22 @@ view model =
                                                                     ]
 
                                                             ViewerRole ->
-                                                                case gameResponse.human.role of
-                                                                    ViewerRole ->
-                                                                        input [ attribute "type" "submit", attribute "value" "Join!", onClick HumanWantsIn ]
-                                                                            []
-
-                                                                    PlayerRole ->
-                                                                        text ""
+                                                                text ""
                                                         ]
                                                     ]
 
                                             Playing ->
-                                                case gameResponse.human.role of
-                                                    PlayerRole ->
-                                                        p [] [ text "Gameplay actions to come here" ]
-
-                                                    ViewerRole ->
-                                                        p [] [ text "This space intentionally left blank" ]
+                                                p [] [ text "Gameplay actions to come here" ]
 
                                             Complete ->
                                                 p [] [ text "Hope you had fun" ]
+                                        , case gameResponse.human.role of
+                                            ViewerRole ->
+                                                input [ attribute "type" "submit", attribute "value" "Join!", onClick HumanWantsIn ]
+                                                    []
+
+                                            PlayerRole ->
+                                                text ""
                                         ]
                                 )
                             ]

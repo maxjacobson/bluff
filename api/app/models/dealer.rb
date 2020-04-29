@@ -138,8 +138,7 @@ class Dealer
   # - Can a player join after the game has ended?
   def can_buy_in?(human)
     current_players.exclude?(human) &&
-      current_players.count < MAX_PLAYERS &&
-      game.pending?
+      current_players.count < MAX_PLAYERS
   end
 
   def attendance_for(human)
