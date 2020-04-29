@@ -267,7 +267,7 @@ update msg model =
                                     GamePage { gamePageModel | betAmount = Just amountInt }
 
                                 Nothing ->
-                                    model.currentPage
+                                    GamePage { gamePageModel | betAmount = Nothing }
 
                         anything ->
                             anything
