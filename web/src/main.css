@@ -140,6 +140,8 @@ img {
 footer {
   border-top: 36px solid #9f9f9f;
   margin-top: 20px;
+  display: flex;
+  justify-content: center;
 }
 
 footer li {
