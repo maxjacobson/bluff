@@ -1158,12 +1158,13 @@ view model =
                                                                 )
                                                             , span []
                                                                 (if player.allOut then
-                                                                    [ Icon.skull "This player is all out." ]
+                                                                    [ Icon.skull "This player is all out."
+                                                                    , span [ class "strike-through " ] [ text player.nickname ]
+                                                                    ]
 
                                                                  else
-                                                                    [ text "" ]
+                                                                    [ text player.nickname ]
                                                                 )
-                                                            , text player.nickname
                                                             ]
                                                         , td []
                                                             [ span []
