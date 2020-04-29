@@ -35,7 +35,7 @@ class GameActionCreator
 
     ApplicationRecord.transaction do
       GameAction.create!(
-        attendance: attendance_for(dealer.current_members.to_a.sample),
+        attendance: game.attendance_for(dealer.current_members.to_a.sample),
         action: 'become_dealer'
       )
 
