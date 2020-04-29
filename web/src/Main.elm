@@ -1233,11 +1233,15 @@ view model =
                                     [ text "Whooooops" ]
 
                                 SuccessfullyRequested response ->
-                                    [ p []
-                                        [ Icon.piggyBank "The pot"
-                                        , text (" " ++ pluralizeChips response.gameData.potSize)
-                                        , text " on the table."
-                                        ]
+                                    [ if response.gameData.potSize > 0 then
+                                        p []
+                                            [ Icon.piggyBank "The pot"
+                                            , text (" " ++ pluralizeChips response.gameData.potSize)
+                                            , text " on the table."
+                                            ]
+
+                                      else
+                                        text ""
                                     , table []
                                         [ thead []
                                             [ tr []
