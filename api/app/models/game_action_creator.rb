@@ -43,7 +43,7 @@ class GameActionCreator
 
       dealer.current_players.each do |player|
         GameAction.create!(
-          attendance: attendance_for(player),
+          attendance: game.attendance_for(player),
           action: 'ante',
           value: dealer.current_ante_amount_for(player)
         )
@@ -53,7 +53,7 @@ class GameActionCreator
 
       dealer.current_players_in_dealing_order.each do |player|
         GameAction.create!(
-          attendance: attendance_for(player),
+          attendance: game.attendance_for(player),
           action: 'draw',
           value: deck.draw.to_i
         )
@@ -64,10 +64,6 @@ class GameActionCreator
   private
 
   attr_reader :game
-
-  def attendance_for(human)
-    game.attendances.detect { |a| a.human_id == human.id } || raise
-  end
 
   # Some nuances to consider later:
   #

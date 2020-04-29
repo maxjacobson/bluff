@@ -29,4 +29,8 @@ class Game < ApplicationRecord
   def last_action_at
     dealer.latest_action_at || created_at
   end
+
+  def attendance_for(human)
+    attendances.detect { |a| a.human_id == human.id } || raise
+  end
 end

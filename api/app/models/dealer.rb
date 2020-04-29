@@ -16,7 +16,12 @@ class Dealer
   # How many chips are currently sitting in the middle of the table
   attr_reader :pot_size
 
+  # Returns a [GameStatus]
   attr_reader :status
+
+  # The player whose turn it is to take an action, if any
+  # Returns a [Human] or [NilClass]
+  attr_reader :action_to
 
   def initialize(game)
     @game = game
@@ -29,6 +34,7 @@ class Dealer
     @current_cards = {}
     @pot_size = 0
     @status = GameStatus::PENDING
+    @action_to = nil
 
     visit_actions
   end
@@ -77,17 +83,17 @@ class Dealer
     current_players + players_to_join_next_hand + players_who_are_out
   end
 
-  def current_ante_amount_for(_player)
-    # FIXME: if the player somehow has fewer than 5 chips, just toss them in,
-    #        we'll figure out how to split the pot
-
+  def current_ante_amount_for(human)
     # TODO: As the game goes on, ratchet this up?
     #       Thinking we can keep track of how many hands have been played, and
     #       have some fixed schedule. Or do some math so it scales as a ratio
     #       of the median chips count or something fancy like that. E.g. 1/20th
     #       of median pot size...??
 
-    DEFAULT_ANTE_AMOUNT
+    [
+      chip_count_for(human),
+      DEFAULT_ANTE_AMOUNT
+    ].min
   end
 
   # The player after the dealer draws and bets first
@@ -99,11 +105,33 @@ class Dealer
     players.rotate(dealer_position + 1)
   end
 
+  def can_bet?(human)
+    chip_count_for(human).positive?
+  end
+
+  def minimum_bet(human)
+    current_ante_amount_for(human)
+  end
+
+  def maximum_bet(human)
+    chip_count_for(human)
+  end
+
+  def can_check?(_human)
+    # FIXME: this depends on the state of the table, need to figure out the math
+    false
+  end
+
+  def can_fold?(_human)
+    # FIXME: this depends on the state of the table, need to figure out the math
+    false
+  end
+
   private
 
   attr_reader :game, :chip_counts, :current_cards, :players_to_join_next_hand,
               :players_who_are_out
-  attr_writer :player_with_dealer_chip, :pot_size
+  attr_writer :player_with_dealer_chip, :pot_size, :action_to
 
   ##### visitor helpers
 
@@ -131,6 +159,7 @@ class Dealer
 
     current_cards.clear
     self.pot_size = 0
+    self.action_to = current_players_in_dealing_order.first
   end
 
   def on_action_draw(action)

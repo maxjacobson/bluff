@@ -249,6 +249,34 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        PlayerWantsToPlaceBet ->
+            case model.currentPage of
+                GamePage gamePageModel ->
+                    ( model, playerPlacesBet gamePageModel model.flags )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        PlayerChangedBetAmount amount ->
+            let
+                newPage =
+                    case model.currentPage of
+                        GamePage gamePageModel ->
+                            case String.toInt amount of
+                                Just amountInt ->
+                                    GamePage { gamePageModel | betAmount = Just amountInt }
+
+                                Nothing ->
+                                    model.currentPage
+
+                        anything ->
+                            anything
+
+                newModel =
+                    { model | currentPage = newPage }
+            in
+            ( newModel, Cmd.none )
+
 
 
 ---- Flags: the data index.js passes in on boot
@@ -278,6 +306,8 @@ type Msg
     | UpdatedNewNickname String
     | SaveNewNickname
     | PlayerWantsToStartGame
+    | PlayerWantsToPlaceBet
+    | PlayerChangedBetAmount String
 
 
 
@@ -326,6 +356,7 @@ type alias ProfilePageModel =
 type alias GamePageModel =
     { gameResponse : WebData GameResponse Http.Error
     , gameIdFromUrl : String
+    , betAmount : Maybe Int
     }
 
 
@@ -357,7 +388,31 @@ type alias GameData =
     , currentDealerId : Maybe Int
     , actions : List Action
     , potSize : Int
+    , nextAction : Maybe NextAction
     }
+
+
+type alias NextAction =
+    { player : HumanGameData
+    , bet : BetAction
+    , check : CheckAction
+    , fold : FoldAction
+    }
+
+
+type alias BetAction =
+    { available : Bool
+    , minimum : Int
+    , maximum : Int
+    }
+
+
+type alias CheckAction =
+    Bool
+
+
+type alias FoldAction =
+    Bool
 
 
 type alias Action =
@@ -531,7 +586,7 @@ actionDecoder =
 
 gameDataDecoder : Decoder GameData
 gameDataDecoder =
-    D.map7 GameData
+    D.map8 GameData
         (D.field "id" D.string)
         (D.field "last_action_at" D.int |> D.andThen posixDecoder)
         (D.field "status" D.string |> D.andThen gameStatusDecoder)
@@ -539,6 +594,34 @@ gameDataDecoder =
         (D.field "current_dealer_id" (D.nullable D.int))
         (D.field "actions" (D.list actionDecoder))
         (D.field "pot_size" D.int)
+        (D.field "next_action" (D.nullable nextActionDecoder))
+
+
+nextActionDecoder : Decoder NextAction
+nextActionDecoder =
+    D.map4 NextAction
+        (D.field "player" humanGameDataDecoder)
+        (D.field "bet" betActionDecoder)
+        (D.field "check" checkActionDecoder)
+        (D.field "fold" foldActionDecoder)
+
+
+betActionDecoder : Decoder BetAction
+betActionDecoder =
+    D.map3 BetAction
+        (D.field "available" D.bool)
+        (D.field "minimum" D.int)
+        (D.field "maximum" D.int)
+
+
+checkActionDecoder : Decoder CheckAction
+checkActionDecoder =
+    D.field "available" D.bool
+
+
+foldActionDecoder : Decoder FoldAction
+foldActionDecoder =
+    D.field "available" D.bool
 
 
 roleDecoder : String -> Decoder Role
@@ -626,7 +709,11 @@ pageFromUrl url =
                         }
 
                 _ ->
-                    GamePage (GamePageModel WaitingForResponse gameId)
+                    GamePage
+                        { gameResponse = WaitingForResponse
+                        , gameIdFromUrl = gameId
+                        , betAmount = Nothing
+                        }
 
         Nothing ->
             HomePage WaitingForResponse
@@ -705,6 +792,35 @@ playerStartsGameCmd model flags =
                 }
 
         _ ->
+            Cmd.none
+
+
+playerPlacesBet : GamePageModel -> Flags -> Cmd Msg
+playerPlacesBet model flags =
+    case model.betAmount of
+        Just amount ->
+            case model.gameResponse of
+                SuccessfullyRequested response ->
+                    Api.post
+                        { url = Api.placeBetUrl flags.apiRoot response.gameData.identifier
+                        , expect = Http.expectJson GotGameData gameResponseDecoder
+                        , uuid = flags.humanUuid
+                        , body =
+                            Http.jsonBody
+                                (E.object
+                                    [ ( "bets"
+                                      , E.object
+                                            [ ( "amount", E.int amount )
+                                            ]
+                                      )
+                                    ]
+                                )
+                        }
+
+                _ ->
+                    Cmd.none
+
+        Nothing ->
             Cmd.none
 
 
@@ -1143,13 +1259,6 @@ view model =
                                                     tr []
                                                         [ td []
                                                             [ span []
-                                                                (if response.gameData.currentDealerId == Just player.id then
-                                                                    [ Icon.arrowRight "This player is the dealer. That just means the player after them bets first." ]
-
-                                                                 else
-                                                                    [ text "" ]
-                                                                )
-                                                            , span []
                                                                 (if player.waitingForNextHand then
                                                                     [ Icon.load "This player will be in the next hand." ]
 
@@ -1163,7 +1272,18 @@ view model =
                                                                     ]
 
                                                                  else
-                                                                    [ text player.nickname ]
+                                                                    [ case response.gameData.nextAction of
+                                                                        Just nextAction ->
+                                                                            if player.id == nextAction.player.id then
+                                                                                Icon.arrowRight ("Action is to " ++ player.nickname)
+
+                                                                            else
+                                                                                text ""
+
+                                                                        Nothing ->
+                                                                            text ""
+                                                                    , text player.nickname
+                                                                    ]
                                                                 )
                                                             ]
                                                         , td []
@@ -1255,7 +1375,69 @@ view model =
                                                     ]
 
                                             Playing ->
-                                                p [] [ text "Gameplay actions to come here" ]
+                                                div []
+                                                    (case gameResponse.gameData.nextAction of
+                                                        Just nextAction ->
+                                                            if nextAction.player.id == gameResponse.human.id then
+                                                                [ h1 [] [ text "Your turn to act" ]
+                                                                , div []
+                                                                    [ if nextAction.bet.available then
+                                                                        let
+                                                                            currentValue =
+                                                                                case gamePageModel.betAmount of
+                                                                                    Just value ->
+                                                                                        value
+
+                                                                                    Nothing ->
+                                                                                        0
+
+                                                                            tooLow =
+                                                                                currentValue < nextAction.bet.minimum
+
+                                                                            tooHigh =
+                                                                                currentValue > nextAction.bet.maximum
+
+                                                                            isDisabled =
+                                                                                tooLow || tooHigh
+                                                                        in
+                                                                        form [ disabled isDisabled, onSubmit PlayerWantsToPlaceBet ]
+                                                                            [ input
+                                                                                [ attribute "type" "number"
+                                                                                , attribute "min" (String.fromInt nextAction.bet.minimum)
+                                                                                , attribute "max" (String.fromInt nextAction.bet.maximum)
+                                                                                , attribute "value" (String.fromInt currentValue)
+                                                                                , onInput PlayerChangedBetAmount
+                                                                                ]
+                                                                                []
+                                                                            , input
+                                                                                [ attribute "type" "submit"
+                                                                                , attribute "value" "Bet"
+                                                                                , disabled isDisabled
+                                                                                ]
+                                                                                []
+                                                                            ]
+
+                                                                      else
+                                                                        p [] [ text "You can't bet" ]
+                                                                    , if nextAction.check then
+                                                                        p [] [ text "You can check" ]
+
+                                                                      else
+                                                                        p [] [ text "You can't check" ]
+                                                                    , if nextAction.fold then
+                                                                        p [] [ text "You can fold" ]
+
+                                                                      else
+                                                                        p [] [ text "You can't fold" ]
+                                                                    ]
+                                                                ]
+
+                                                            else
+                                                                [ text ("Waiting for " ++ nextAction.player.nickname) ]
+
+                                                        Nothing ->
+                                                            [ text "This space intentionally left blank" ]
+                                                    )
 
                                             Complete ->
                                                 p [] [ text "Hope you had fun" ]
