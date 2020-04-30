@@ -1,5 +1,7 @@
 module Api exposing
     ( availableGameIdUrl
+    , checkUrl
+    , foldUrl
     , gameUrl
     , get
     , joinGameUrl
@@ -17,6 +19,16 @@ import Url.Builder
 availableGameIdUrl : String -> String
 availableGameIdUrl apiRoot =
     Url.Builder.crossOrigin apiRoot [ "available-game-id.json" ] []
+
+
+checkUrl : String -> String -> String
+checkUrl apiRoot gameId =
+    Url.Builder.crossOrigin apiRoot [ "games", gameId, "checks" ++ ".json" ] []
+
+
+foldUrl : String -> String -> String
+foldUrl apiRoot gameId =
+    Url.Builder.crossOrigin apiRoot [ "games", gameId, "folds" ++ ".json" ] []
 
 
 gameUrl : String -> String -> String

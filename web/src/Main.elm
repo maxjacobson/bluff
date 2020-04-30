@@ -277,6 +277,22 @@ update msg model =
             in
             ( newModel, Cmd.none )
 
+        PlayerWantsToCheck ->
+            case model.currentPage of
+                GamePage gamePageModel ->
+                    ( model, playerChecks gamePageModel model.flags )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        PlayerWantsToFold ->
+            case model.currentPage of
+                GamePage gamePageModel ->
+                    ( model, playerFolds gamePageModel model.flags )
+
+                _ ->
+                    ( model, Cmd.none )
+
 
 
 ---- Flags: the data index.js passes in on boot
@@ -308,6 +324,8 @@ type Msg
     | PlayerWantsToStartGame
     | PlayerWantsToPlaceBet
     | PlayerChangedBetAmount String
+    | PlayerWantsToCheck
+    | PlayerWantsToFold
 
 
 
@@ -815,6 +833,38 @@ playerPlacesBet model flags =
                     Cmd.none
 
         Nothing ->
+            Cmd.none
+
+
+playerChecks : GamePageModel -> Flags -> Cmd Msg
+playerChecks model flags =
+    case model.gameResponse of
+        SuccessfullyRequested response ->
+            Api.post
+                { url = Api.checkUrl flags.apiRoot response.gameData.identifier
+                , expect = Http.expectJson GotGameData gameResponseDecoder
+                , uuid = flags.humanUuid
+                , body =
+                    Http.emptyBody
+                }
+
+        _ ->
+            Cmd.none
+
+
+playerFolds : GamePageModel -> Flags -> Cmd Msg
+playerFolds model flags =
+    case model.gameResponse of
+        SuccessfullyRequested response ->
+            Api.post
+                { url = Api.foldUrl flags.apiRoot response.gameData.identifier
+                , expect = Http.expectJson GotGameData gameResponseDecoder
+                , uuid = flags.humanUuid
+                , body =
+                    Http.emptyBody
+                }
+
+        _ ->
             Cmd.none
 
 
@@ -1385,54 +1435,56 @@ view model =
                                                             if nextAction.player.id == gameResponse.human.id then
                                                                 [ h1 [] [ text "Your turn to act" ]
                                                                 , div []
-                                                                    [ if nextAction.bet.available then
-                                                                        let
-                                                                            currentValue =
-                                                                                case gamePageModel.betAmount of
-                                                                                    Just value ->
-                                                                                        value
+                                                                    [ let
+                                                                        currentValue =
+                                                                            case gamePageModel.betAmount of
+                                                                                Just value ->
+                                                                                    value
 
-                                                                                    Nothing ->
-                                                                                        0
+                                                                                Nothing ->
+                                                                                    0
 
-                                                                            tooLow =
-                                                                                currentValue < nextAction.bet.minimum
+                                                                        tooLow =
+                                                                            currentValue < nextAction.bet.minimum
 
-                                                                            tooHigh =
-                                                                                currentValue > nextAction.bet.maximum
+                                                                        tooHigh =
+                                                                            currentValue > nextAction.bet.maximum
 
-                                                                            isDisabled =
-                                                                                tooLow || tooHigh
-                                                                        in
-                                                                        form [ disabled isDisabled, onSubmit PlayerWantsToPlaceBet ]
-                                                                            [ input
-                                                                                [ attribute "type" "number"
-                                                                                , attribute "min" (String.fromInt nextAction.bet.minimum)
-                                                                                , attribute "max" (String.fromInt nextAction.bet.maximum)
-                                                                                , attribute "value" (String.fromInt currentValue)
-                                                                                , onInput PlayerChangedBetAmount
-                                                                                ]
-                                                                                []
-                                                                            , input
-                                                                                [ attribute "type" "submit"
-                                                                                , attribute "value" "Bet"
-                                                                                , disabled isDisabled
-                                                                                ]
-                                                                                []
+                                                                        isDisabled =
+                                                                            tooLow || tooHigh || not nextAction.bet.available
+                                                                      in
+                                                                      form [ disabled isDisabled, onSubmit PlayerWantsToPlaceBet ]
+                                                                        [ input
+                                                                            [ attribute "type" "number"
+                                                                            , attribute "min" (String.fromInt nextAction.bet.minimum)
+                                                                            , attribute "max" (String.fromInt nextAction.bet.maximum)
+                                                                            , attribute "value" (String.fromInt currentValue)
+                                                                            , onInput PlayerChangedBetAmount
                                                                             ]
-
-                                                                      else
-                                                                        p [] [ text "You can't bet" ]
-                                                                    , if nextAction.check then
-                                                                        p [] [ text "You can check" ]
-
-                                                                      else
-                                                                        p [] [ text "You can't check" ]
-                                                                    , if nextAction.fold then
-                                                                        p [] [ text "You can fold" ]
-
-                                                                      else
-                                                                        p [] [ text "You can't fold" ]
+                                                                            []
+                                                                        , input
+                                                                            [ attribute "type" "submit"
+                                                                            , attribute "value" "Bet"
+                                                                            , disabled isDisabled
+                                                                            ]
+                                                                            []
+                                                                        ]
+                                                                    , form [ disabled (not nextAction.check), onSubmit PlayerWantsToCheck ]
+                                                                        [ input
+                                                                            [ attribute "type" "submit"
+                                                                            , attribute "value" "Check"
+                                                                            , disabled (not nextAction.check)
+                                                                            ]
+                                                                            []
+                                                                        ]
+                                                                    , form [ disabled (not nextAction.fold), onSubmit PlayerWantsToFold ]
+                                                                        [ input
+                                                                            [ attribute "type" "submit"
+                                                                            , attribute "value" "Fold"
+                                                                            , disabled (not nextAction.fold)
+                                                                            ]
+                                                                            []
+                                                                        ]
                                                                     ]
                                                                 ]
 

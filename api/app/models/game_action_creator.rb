@@ -42,6 +42,35 @@ class GameActionCreator
     end
   end
 
+  def check!(human)
+    return unless can_check?(human)
+
+    ApplicationRecord.transaction do
+      attendance = game.attendance_for(human)
+
+      GameAction.create!(
+        attendance: attendance,
+        action: 'check'
+      )
+    end
+  end
+
+  def fold!(human)
+    return unless can_fold?(human)
+
+    ApplicationRecord.transaction do
+      attendance = game.attendance_for(human)
+      dealer = Dealer.new(game)
+      card = dealer.current_card_for(human)
+
+      GameAction.create!(
+        attendance: attendance,
+        action: 'fold',
+        value: CardDatabaseValue.new(card).to_i
+      )
+    end
+  end
+
   def start!(requested_by_human)
     return unless can_start?(requested_by_human)
 
@@ -87,6 +116,11 @@ class GameActionCreator
     amount >= min && amount <= max && dealer.action_to == human
   end
 
+  def can_check?(human)
+    dealer = Dealer.new(game)
+    dealer.can_check?(human)
+  end
+
   # Some nuances to consider later:
   #
   # - Can a player re-join after resigning?
@@ -97,6 +131,11 @@ class GameActionCreator
 
     current_members.exclude?(human) &&
       current_members.count < MAX_PLAYERS
+  end
+
+  def can_fold?(human)
+    dealer = Dealer.new(game)
+    dealer.current_players.include?(human) && dealer.action_to == human
   end
 
   # Policy about who can start the game and when
