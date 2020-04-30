@@ -175,6 +175,11 @@ class Dealer
     chip_counts[action.human.id] += action.value
   end
 
+  def on_action_bet(action)
+    chip_counts[action.human.id] -= action.value
+    self.pot_size += action.value
+  end
+
   #### summarizers
 
   def summarize_ante_for(action, current_human)
@@ -185,6 +190,11 @@ class Dealer
   def summarize_become_dealer_for(action, current_human)
     actor = action_summary_actor(action, current_human)
     "#{actor} received the dealer chip"
+  end
+
+  def summarize_bet_for(action, current_human)
+    actor = action_summary_actor(action, current_human)
+    "#{actor} bet #{plural_chips action.value}"
   end
 
   def summarize_buy_in_for(action, current_human)

@@ -11,6 +11,20 @@ class GameActionCreator
     @game = game
   end
 
+  def bet!(amount, human)
+    return unless can_bet?(amount, human)
+
+    ApplicationRecord.transaction do
+      attendance = game.attendance_for(human)
+
+      GameAction.create!(
+        attendance: attendance,
+        action: 'bet',
+        value: amount
+      )
+    end
+  end
+
   # Records a GameAction of action = 'buy_in'. That action represents a player
   # joining the game and getting their initial stack of chips. There's no
   # actual money involved, this is just for fun.
@@ -64,6 +78,14 @@ class GameActionCreator
   private
 
   attr_reader :game
+
+  def can_bet?(amount, human)
+    dealer = Dealer.new(game)
+    min = dealer.minimum_bet(human)
+    max = dealer.maximum_bet(human)
+
+    amount >= min && amount <= max && dealer.action_to == human
+  end
 
   # Some nuances to consider later:
   #
