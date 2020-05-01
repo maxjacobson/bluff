@@ -30,10 +30,10 @@ class Dealer
     @current_players = SortedSet.new
     @players_to_join_next_hand = Set.new
     @players_who_are_out = Set.new
-    @current_dealer = nil
     @chip_counts = {}
     @current_cards = {}
     @pot_by_player = {}
+    @action_amounts = {}
     @status = GameStatus::PENDING
     @action_to = nil
 
@@ -53,7 +53,7 @@ class Dealer
   end
 
   def chip_count_for(human)
-    chip_counts.fetch(human.id)
+    chip_counts.fetch(human)
   end
 
   def current_card_for(human)
@@ -69,12 +69,10 @@ class Dealer
   end
 
   def actions
-    @actions ||= game.actions.chronological.to_a
+    @actions ||= game.actions.chronological.includes([:human]).to_a
   end
 
   # Summarize what happened
-  # TODO: after implementing cards, make sure not to reveal a player's card to
-  # that player (maybe can reveal after hand ends?)
   def summarize_for(action, human)
     send("summarize_#{action.action}_for", action, human)
   end
@@ -109,10 +107,9 @@ class Dealer
   end
 
   def minimum_bet(human)
-    minimum_bet = [
-      current_ante_amount_for(human),
-      max_bet_on_table_by_someone_other_than(human)
-    ].max
+    current_bet = bet_amount_for(human)
+    minimum_bet = max_bet_on_table_by_someone_other_than(human) - current_bet
+    minimum_bet = 1 if minimum_bet.zero? # zero isn't a bet
 
     current_chip_count = chip_count_for(human)
 
@@ -150,18 +147,52 @@ class Dealer
     pot_by_player.values.sum
   end
 
+  def bet_amount_for(player)
+    pot_by_player[player] || 0
+  end
+
   private
 
   attr_reader :game, :chip_counts, :current_cards, :players_to_join_next_hand,
               :players_who_are_out
+
+  # how much had the player put in when they last checked, or bet.
+  # Or, how much were they faced with putting in if they folded.
+  attr_reader :action_amounts
   attr_writer :player_with_dealer_chip, :action_to
 
-  def next_better_after(human)
+  # def next_better_after(human)
+  #   players = current_players.to_a
+  #   position = players.index(human)
+  #   players.rotate(position + 1).detect do |potential_better|
+  #     bet_amount_for(human) > bet_amount_for(potential_better) &&
+  #       chip_count_for(potential_better).positive?
+  #   end
+  # end
+
+  # def next_checker_after(human, human_checked_at)
+  #   players = current_players.to_a
+  #   position = players.index(human)
+  #   players.rotate(position + 1).detect do |potential_checker|
+  #     action_amount_for(potential_checker).nil? ||
+  #       action_amount_for(potential_checker) < human_checked_at &&
+  #         chip_count_for(potential_checker).positive?
+  #   end
+  # end
+
+  def next_player_that_can_act(human)
     players = current_players.to_a
     position = players.index(human)
-    players.rotate(position + 1).detect do |potential_better|
-      bet_amount_for(human) > bet_amount_for(potential_better) &&
-        chip_count_for(potential_better).positive?
+    players.rotate(position + 1).detect do |potential_actor|
+      next if human == potential_actor
+
+      bet_to_match = max_bet_on_table_by_someone_other_than(potential_actor)
+
+      # Is this exhaustive?
+      (bet_to_match > bet_amount_for(potential_actor) ||
+        action_amount_for(potential_actor).nil? ||
+        action_amount_for(potential_actor) < action_amount_for(human)) &&
+        chip_count_for(potential_actor).positive?
     end
   end
 
@@ -173,8 +204,8 @@ class Dealer
     max_bet_on_table
   end
 
-  def bet_amount_for(player)
-    pot_by_player[player] || 0
+  def action_amount_for(player)
+    action_amounts[player]
   end
 
   ##### visitor helpers
@@ -190,7 +221,7 @@ class Dealer
     # Move the chips from the player to the pot
     pot_by_player[action.human] ||= 0
     pot_by_player[action.human] += action.value
-    chip_counts[action.human.id] -= action.value
+    chip_counts[action.human] -= action.value
   end
 
   # If this action happens, it means we're starting a fresh hand
@@ -204,11 +235,15 @@ class Dealer
 
     current_cards.clear
     pot_by_player.clear
+    action_amounts.clear
     self.action_to = current_players_in_dealing_order.first
   end
 
   def on_action_check(action)
-    # just move the action, and if there's no new action, end the hand
+    action_amounts[action.human] = bet_amount_for(action.human)
+    self.action_to = next_player_that_can_act(action.human)
+
+    on_hand_ended if action_to.blank?
   end
 
   def on_action_draw(action)
@@ -220,33 +255,94 @@ class Dealer
     players_to_join_next_hand.add(action.human)
 
     # This human bought in with a certain number of chips
-    chip_counts[action.human.id] ||= 0
-    chip_counts[action.human.id] += action.value
+    chip_counts[action.human] ||= 0
+    chip_counts[action.human] += action.value
   end
 
   def on_action_bet(action)
-    chip_counts[action.human.id] -= action.value
+    chip_counts[action.human] -= action.value
     pot_by_player[action.human] ||= 0
     pot_by_player[action.human] += action.value
+    action_amounts[action.human] = bet_amount_for(action.human)
 
-    # May be setting it to nil
-    self.action_to = next_better_after(action.human)
-
+    self.action_to = next_player_that_can_act(action.human)
     on_hand_ended if action_to.blank?
   end
 
   def on_action_fold(action)
+    action_amounts[action.human] =
+      max_bet_on_table_by_someone_other_than(action.human)
+    self.action_to = next_player_that_can_act(action.human)
     current_cards.delete(action.human)
     current_players.delete(action.human)
     players_to_join_next_hand.add(action.human)
+    self.action_to = nil if current_players.count == 1
+    on_hand_ended if action_to.blank?
   end
 
   def on_hand_ended
-    # hand is over, need to figure out what to do
-    # - divvy up pot
-    # - eject some players from the game who are now at zero chips
-    # - expose the next dealer via a getter?
-    raise
+    divvy_up_pot
+
+    # Perhaps odd to do this on hand end, and then again on hand begin...
+    players_to_join_next_hand.each do |player|
+      current_players.add(player)
+    end
+
+    current_players.to_a.each do |player|
+      if chip_count_for(player).zero?
+        current_players.delete(player)
+        players_who_are_out.add(player)
+      end
+    end
+
+    if current_players.count == 1
+      @status = GameStatus::COMPLETE
+      self.player_with_dealer_chip = nil
+    else
+      self.player_with_dealer_chip = current_players_in_dealing_order.first
+    end
+  end
+
+  def divvy_up_pot
+    loop do
+      values_in_pot = pot_by_player.values.uniq.sort
+
+      largest_amount = values_in_pot[-1]
+      second_largest_amount = values_in_pot[-2] || 0
+
+      at_stake_per_player_with_this_much_in_pot_for_this_split_pot =
+        largest_amount - second_largest_amount
+
+      player_with_best_hand = nil
+      winnings = 0
+      pot_by_player.each do |player, amount|
+        next unless amount == largest_amount
+
+        if current_players.include?(player) &&
+           (
+              player_with_best_hand.nil? ||
+             better_hand?(player, player_with_best_hand)
+            )
+
+          player_with_best_hand = player
+        end
+
+        winnings +=
+          at_stake_per_player_with_this_much_in_pot_for_this_split_pot
+        pot_by_player[player] -=
+          at_stake_per_player_with_this_much_in_pot_for_this_split_pot
+      end
+
+      chip_counts[player_with_best_hand] += winnings
+
+      break if pot_by_player.values.sum.zero?
+    end
+  end
+
+  def better_hand?(player, other_player)
+    card = current_card_for(player)
+    other_card = current_card_for(other_player)
+    card.better_than?(other_card)
   end
 
   #### summarizers

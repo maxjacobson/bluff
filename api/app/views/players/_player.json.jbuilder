@@ -4,6 +4,7 @@
 json.id player.id
 json.nickname player.nickname
 json.chips_count dealer.chip_count_for(player)
+json.bet_amount dealer.bet_amount_for(player)
 
 card = dealer.current_card_for(player)
 

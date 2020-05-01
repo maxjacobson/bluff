@@ -22,6 +22,8 @@ class GameActionCreator
         action: 'bet',
         value: amount
       )
+
+      check_if_end_of_hand
     end
   end
 
@@ -52,6 +54,8 @@ class GameActionCreator
         attendance: attendance,
         action: 'check'
       )
+
+      check_if_end_of_hand
     end
   end
 
@@ -68,6 +72,8 @@ class GameActionCreator
         action: 'fold',
         value: CardDatabaseValue.new(card).to_i
       )
+
+      check_if_end_of_hand
     end
   end
 
@@ -146,5 +152,35 @@ class GameActionCreator
     current_players.include?(human) &&
       current_players.count >= MIN_PLAYERS &&
       dealer.status.pending?
+  end
+
+  def check_if_end_of_hand
+    dealer = Dealer.new(game)
+    return unless dealer.status.playing? && dealer.action_to.blank?
+
+    # The hand is over, we'll need to deal a new hand to get fresh action
+    GameAction.create!(
+      attendance: game.attendance_for(dealer.player_with_dealer_chip),
+      action: 'become_dealer'
+    )
+
+    dealer = Dealer.new(game)
+    dealer.current_players.each do |player|
+      GameAction.create!(
+        attendance: game.attendance_for(player),
+        action: 'ante',
+        value: dealer.current_ante_amount_for(player)
+      )
+    end
+
+    deck = DeckOfCards.new.shuffle
+
+    dealer.current_players_in_dealing_order.each do |player|
+      GameAction.create!(
+        attendance: game.attendance_for(player),
+        action: 'draw',
+        value: deck.draw.to_i
+      )
+    end
   end
 end

@@ -44,6 +44,10 @@ class Card
     CardDatabaseValue.new(self).to_i
   end
 
+  def better_than?(other)
+    to_i > other.to_i
+  end
+
   protected
 
   def <=>(other)

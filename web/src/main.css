@@ -156,7 +156,6 @@ footer li:not(:first-child)::before {
 .icons-credits {
   list-style-type: none;
   padding: 0;
-  display: inline;
 }
 
 .icons-credits li {
@@ -223,4 +222,8 @@ th {
 .about-page {
   max-width: 820px;
   margin: 0 auto;
+}
+
+.red-text {
+  color: red;
 }

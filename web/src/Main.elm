@@ -105,7 +105,11 @@ update msg model =
                         GamePage gamePageModel ->
                             case result of
                                 Ok newGameResponse ->
-                                    GamePage { gamePageModel | gameResponse = SuccessfullyRequested newGameResponse }
+                                    GamePage
+                                        { gamePageModel
+                                            | gameResponse = SuccessfullyRequested newGameResponse
+                                            , currentlySubmittingAction = False -- This isn't strictly right, but it's close enough
+                                        }
 
                                 Err e ->
                                     GamePage { gamePageModel | gameResponse = FailedToRequest e }
@@ -252,7 +256,11 @@ update msg model =
         PlayerWantsToPlaceBet ->
             case model.currentPage of
                 GamePage gamePageModel ->
-                    ( model, playerPlacesBet gamePageModel model.flags )
+                    let
+                        newPage =
+                            GamePage { gamePageModel | currentlySubmittingAction = True }
+                    in
+                    ( { model | currentPage = newPage }, playerPlacesBet gamePageModel model.flags )
 
                 _ ->
                     ( model, Cmd.none )
@@ -280,7 +288,11 @@ update msg model =
         PlayerWantsToCheck ->
             case model.currentPage of
                 GamePage gamePageModel ->
-                    ( model, playerChecks gamePageModel model.flags )
+                    let
+                        newPage =
+                            GamePage { gamePageModel | currentlySubmittingAction = True }
+                    in
+                    ( { model | currentPage = newPage }, playerChecks gamePageModel model.flags )
 
                 _ ->
                     ( model, Cmd.none )
@@ -288,7 +300,11 @@ update msg model =
         PlayerWantsToFold ->
             case model.currentPage of
                 GamePage gamePageModel ->
-                    ( model, playerFolds gamePageModel model.flags )
+                    let
+                        newPage =
+                            GamePage { gamePageModel | currentlySubmittingAction = True }
+                    in
+                    ( { model | currentPage = newPage }, playerFolds gamePageModel model.flags )
 
                 _ ->
                     ( model, Cmd.none )
@@ -371,6 +387,7 @@ type alias GamePageModel =
     { gameResponse : WebData GameResponse Http.Error
     , gameIdFromUrl : String
     , betAmount : Maybe Int
+    , currentlySubmittingAction : Bool
     }
 
 
@@ -468,6 +485,7 @@ type alias Player =
     { id : Int
     , nickname : String
     , chipsCount : Int
+    , betAmount : Int
     , currentCard : Maybe Card
     , waitingForNextHand : Bool
     , allOut : Bool
@@ -582,10 +600,11 @@ currentCardDecoder =
 
 playerDecoder : Decoder Player
 playerDecoder =
-    D.map6 Player
+    D.map7 Player
         (D.field "id" D.int)
         (D.field "nickname" D.string)
         (D.field "chips_count" D.int)
+        (D.field "bet_amount" D.int)
         (D.field "current_card" currentCardDecoder)
         (D.field "waiting_for_next_hand" D.bool)
         (D.field "all_out" D.bool)
@@ -719,6 +738,7 @@ pageFromUrl url =
                         { gameResponse = WaitingForResponse
                         , gameIdFromUrl = gameId
                         , betAmount = Nothing
+                        , currentlySubmittingAction = False
                         }
 
         Nothing ->
@@ -895,8 +915,8 @@ pollingCmd page flags currentTime =
                 GamePage gamePageModel ->
                     case gamePageModel.gameResponse of
                         SuccessfullyRequested gameResponse ->
-                            if fewerThanMinutesPassedBetween 2 gameResponse.gameData.lastActionAt currentTime && onNthSecond 2 currentTime then
-                                -- Keep polling every two seconds, because the game is active!
+                            if fewerThanMinutesPassedBetween 2 gameResponse.gameData.lastActionAt currentTime && onNthSecond 5 currentTime then
+                                -- Keep polling every five seconds, because the game is active!
                                 cmdWhenLoadingPage page flags
 
                             else if greaterThanMinutesPassedBetween 2 gameResponse.human.heartbeatAt currentTime && onNthSecond 5 currentTime then
@@ -1144,6 +1164,12 @@ view model =
                             , li [] [ text "Share the URL with your friends" ]
                             , li [] [ text "Play some hands" ]
                             ]
+                        , p []
+                            [ text "FYI: ♠ > "
+                            , span [ class "red-text" ] [ text "♥" ]
+                            , text " > ♣ > "
+                            , span [ class "red-text" ] [ text "♦" ]
+                            ]
                         ]
 
                     AboutPage ->
@@ -1305,6 +1331,7 @@ view model =
                                                 [ th [] [ text "Player" ]
                                                 , th [] [ text "" ]
                                                 , th [] [ text "Chips" ]
+                                                , th [] [ text "Bet" ]
                                                 ]
                                             ]
                                         , tbody []
@@ -1360,6 +1387,7 @@ view model =
                                                                 )
                                                             ]
                                                         , td [] [ text (String.fromInt player.chipsCount) ]
+                                                        , td [] [ text (String.fromInt player.betAmount) ]
                                                         ]
                                                 )
                                                 response.gameData.players
@@ -1451,7 +1479,7 @@ view model =
                                                                             currentValue > nextAction.bet.maximum
 
                                                                         isDisabled =
-                                                                            tooLow || tooHigh || not nextAction.bet.available
+                                                                            tooLow || tooHigh || not nextAction.bet.available || gamePageModel.currentlySubmittingAction
                                                                       in
                                                                       form [ disabled isDisabled, onSubmit PlayerWantsToPlaceBet ]
                                                                         [ input
@@ -1473,7 +1501,7 @@ view model =
                                                                         [ input
                                                                             [ attribute "type" "submit"
                                                                             , attribute "value" "Check"
-                                                                            , disabled (not nextAction.check)
+                                                                            , disabled (not nextAction.check || gamePageModel.currentlySubmittingAction)
                                                                             ]
                                                                             []
                                                                         ]
@@ -1481,7 +1509,7 @@ view model =
                                                                         [ input
                                                                             [ attribute "type" "submit"
                                                                             , attribute "value" "Fold"
-                                                                            , disabled (not nextAction.fold)
+                                                                            , disabled (not nextAction.fold || gamePageModel.currentlySubmittingAction)
                                                                             ]
                                                                             []
                                                                         ]

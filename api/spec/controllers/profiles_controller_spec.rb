@@ -60,6 +60,7 @@ RSpec.describe ProfilesController do
                 'players' => [{
                   'id' => human.id,
                   'chips_count' => 100,
+                  'bet_amount' => 0,
                   'nickname' => human.nickname,
                   'current_card' => nil,
                   'waiting_for_next_hand' => true,
@@ -67,6 +68,7 @@ RSpec.describe ProfilesController do
                 }, {
                   'id' => other_human.id,
                   'chips_count' => 100,
+                  'bet_amount' => 0,
                   'nickname' => other_human.nickname,
                   'current_card' => nil,
                   'waiting_for_next_hand' => true,
