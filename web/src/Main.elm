@@ -12,7 +12,6 @@ import Html
         , form
         , h1
         , h2
-        , h3
         , header
         , input
         , li
@@ -31,7 +30,16 @@ import Html
         , tr
         , ul
         )
-import Html.Attributes exposing (attribute, class, disabled, href, target, value)
+import Html.Attributes
+    exposing
+        ( attribute
+        , class
+        , disabled
+        , href
+        , target
+        , title
+        , value
+        )
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import Icon
@@ -68,7 +76,7 @@ update msg model =
         SubmittedGoToGame ->
             case model.currentPage of
                 HomePage homePageModel ->
-                    case homePageModel.availableGameIdResponse of
+                    case homePageModel of
                         SuccessfullyRequested gameId ->
                             ( model, Nav.pushUrl model.key (pathForGameId gameId) )
 
@@ -126,13 +134,13 @@ update msg model =
             let
                 newPage =
                     case model.currentPage of
-                        HomePage homePageModel ->
+                        HomePage _ ->
                             case result of
                                 Ok availableGameIdResponse ->
-                                    HomePage { homePageModel | availableGameIdResponse = SuccessfullyRequested availableGameIdResponse }
+                                    HomePage (SuccessfullyRequested availableGameIdResponse)
 
                                 Err e ->
-                                    HomePage { homePageModel | availableGameIdResponse = FailedToRequest e }
+                                    HomePage (FailedToRequest e)
 
                         _ ->
                             model.currentPage
@@ -161,19 +169,19 @@ update msg model =
             let
                 newPage =
                     case model.currentPage of
-                        HomePage homePageModel ->
+                        GamePage gamePageModel ->
                             case result of
                                 Ok response ->
-                                    HomePage
-                                        { homePageModel
+                                    GamePage
+                                        { gamePageModel
                                             | profileResponse = SuccessfullyRequested response
-                                            , newNickname = response.nickname
+                                            , newNickname = response
                                             , currentlySavingNickname = False
                                             , editingNickname = False
                                         }
 
                                 Err e ->
-                                    HomePage { homePageModel | profileResponse = FailedToRequest e }
+                                    GamePage { gamePageModel | profileResponse = FailedToRequest e }
 
                         anything ->
                             anything
@@ -187,8 +195,8 @@ update msg model =
             let
                 newPage =
                     case model.currentPage of
-                        HomePage homePageModel ->
-                            HomePage { homePageModel | editingNickname = True }
+                        GamePage gamePageModel ->
+                            GamePage { gamePageModel | editingNickname = True }
 
                         anything ->
                             anything
@@ -202,8 +210,8 @@ update msg model =
             let
                 newPage =
                     case model.currentPage of
-                        HomePage homePageModel ->
-                            HomePage { homePageModel | newNickname = newNickname }
+                        GamePage gamePageModel ->
+                            GamePage { gamePageModel | newNickname = newNickname }
 
                         anything ->
                             anything
@@ -215,10 +223,10 @@ update msg model =
 
         SaveNewNickname ->
             case model.currentPage of
-                HomePage homePageModel ->
+                GamePage gamePageModel ->
                     let
                         newPage =
-                            HomePage { homePageModel | currentlySavingNickname = True }
+                            GamePage { gamePageModel | currentlySavingNickname = True }
 
                         newModel =
                             { model | currentPage = newPage }
@@ -233,7 +241,7 @@ update msg model =
                                         (E.object
                                             [ ( "profile"
                                               , E.object
-                                                    [ ( "nickname", E.string homePageModel.newNickname )
+                                                    [ ( "nickname", E.string gamePageModel.newNickname )
                                                     ]
                                               )
                                             ]
@@ -331,7 +339,7 @@ type Msg
     | UrlChanged Url.Url
     | GotGameData (Result Http.Error GameResponse)
     | GotAvailableGameId (Result Http.Error AvailableGameIdResponse)
-    | GotProfile (Result Http.Error ProfileResponse)
+    | GotProfile (Result Http.Error Nickname)
     | Tick Time.Posix
     | HumanWantsIn
     | MakeNicknameEditable
@@ -375,12 +383,7 @@ type WebData response error
 
 
 type alias HomePageModel =
-    { availableGameIdResponse : WebData String Http.Error
-    , profileResponse : WebData ProfileResponse Http.Error
-    , editingNickname : Bool
-    , newNickname : String
-    , currentlySavingNickname : Bool
-    }
+    WebData String Http.Error
 
 
 type alias GamePageModel =
@@ -388,6 +391,10 @@ type alias GamePageModel =
     , gameIdFromUrl : String
     , betAmount : Maybe Int
     , currentlySubmittingAction : Bool
+    , profileResponse : WebData Nickname Http.Error
+    , editingNickname : Bool
+    , newNickname : String
+    , currentlySavingNickname : Bool
     }
 
 
@@ -405,10 +412,8 @@ type alias AvailableGameIdResponse =
     String
 
 
-type alias ProfileResponse =
-    { nickname : String
-    , games : List GameData
-    }
+type alias Nickname =
+    String
 
 
 type alias GameData =
@@ -710,16 +715,9 @@ gameResponseDecoder =
         (D.at [ "meta", "human" ] humanGameDataDecoder)
 
 
-gamesResponseDecoder : Decoder (List GameData)
-gamesResponseDecoder =
-    D.list gameDataDecoder
-
-
-profileResponseDecoder : Decoder ProfileResponse
+profileResponseDecoder : Decoder Nickname
 profileResponseDecoder =
-    D.map2 ProfileResponse
-        (D.field "data" humanDataDecoder)
-        (D.at [ "data", "games" ] gamesResponseDecoder)
+    D.field "data" humanDataDecoder
 
 
 pageFromUrl : Url.Url -> Page
@@ -739,16 +737,14 @@ pageFromUrl url =
                         , gameIdFromUrl = gameId
                         , betAmount = Nothing
                         , currentlySubmittingAction = False
+                        , newNickname = ""
+                        , editingNickname = False
+                        , currentlySavingNickname = False
+                        , profileResponse = WaitingForResponse
                         }
 
         Nothing ->
-            HomePage
-                { availableGameIdResponse = WaitingForResponse
-                , profileResponse = WaitingForResponse
-                , newNickname = ""
-                , editingNickname = False
-                , currentlySavingNickname = False
-                }
+            HomePage WaitingForResponse
 
 
 gameIdFromUrl : Url.Url -> Maybe String
@@ -1216,7 +1212,7 @@ view model =
                     HomePage homePageModel ->
                         let
                             ( isDisabled, buttonText ) =
-                                case homePageModel.availableGameIdResponse of
+                                case homePageModel of
                                     SuccessfullyRequested _ ->
                                         ( False, "New game" )
 
@@ -1236,77 +1232,6 @@ view model =
                                     []
                                 ]
                             ]
-                        , div []
-                            (case homePageModel.profileResponse of
-                                WaitingForResponse ->
-                                    [ p [] [ text "Loading..." ] ]
-
-                                SuccessfullyRequested response ->
-                                    [ if homePageModel.editingNickname then
-                                        p []
-                                            [ form [ onSubmit SaveNewNickname ]
-                                                [ strong [] [ text "Nickname: " ]
-                                                , input
-                                                    [ attribute "type" "text"
-                                                    , attribute "placeholder" "Your nickname"
-                                                    , onInput UpdatedNewNickname
-                                                    , value homePageModel.newNickname
-                                                    , disabled homePageModel.currentlySavingNickname
-                                                    ]
-                                                    []
-                                                , input
-                                                    [ attribute "type" "submit"
-                                                    , attribute "value" "Save"
-                                                    , disabled (String.isEmpty homePageModel.newNickname || homePageModel.currentlySavingNickname)
-                                                    ]
-                                                    []
-                                                ]
-                                            ]
-
-                                      else
-                                        p []
-                                            [ strong [] [ text "Nickname: " ]
-                                            , text response.nickname
-                                            , text " "
-                                            , input
-                                                [ attribute "type" "submit"
-                                                , onClick MakeNicknameEditable
-                                                , attribute "value" "Edit"
-                                                ]
-                                                []
-                                            ]
-                                    , case List.length response.games of
-                                        0 ->
-                                            -- No need to tell people about games until they've joined a game
-                                            text ""
-
-                                        _ ->
-                                            div []
-                                                [ h3 [] [ text "History" ]
-                                                , table []
-                                                    [ thead []
-                                                        [ tr []
-                                                            [ th [] [ text "Game" ]
-                                                            , th [] [ text "Last active" ]
-                                                            ]
-                                                        ]
-                                                    , tbody []
-                                                        (List.map
-                                                            (\game ->
-                                                                tr []
-                                                                    [ td [] [ a [ href (pathForGameId game.identifier) ] [ text game.identifier ] ]
-                                                                    , td [] [ text (relativeTimeInPast model.currentTime game.lastActionAt) ]
-                                                                    ]
-                                                            )
-                                                            response.games
-                                                        )
-                                                    ]
-                                                ]
-                                    ]
-
-                                FailedToRequest _ ->
-                                    [ p [] [ text "Whoops, couldn't load your profile. Look, all I can say is I'm sorry." ] ]
-                            )
                         ]
 
                     GamePage gamePageModel ->
@@ -1363,7 +1288,44 @@ view model =
 
                                                                         Nothing ->
                                                                             text ""
-                                                                    , text player.nickname
+                                                                    , if response.human.id == player.id then
+                                                                        if gamePageModel.editingNickname then
+                                                                            form [ onSubmit SaveNewNickname, class "edit-nickname" ]
+                                                                                [ input
+                                                                                    [ attribute "type" "text"
+                                                                                    , attribute "placeholder" "Your nickname"
+                                                                                    , onInput UpdatedNewNickname
+                                                                                    , value gamePageModel.newNickname
+                                                                                    , disabled gamePageModel.currentlySavingNickname
+                                                                                    ]
+                                                                                    []
+                                                                                , input
+                                                                                    [ attribute "type" "submit"
+                                                                                    , attribute "value" "Save"
+                                                                                    , disabled (String.isEmpty gamePageModel.newNickname || gamePageModel.currentlySavingNickname)
+                                                                                    ]
+                                                                                    []
+                                                                                ]
+
+                                                                        else
+                                                                            let
+                                                                                nickname =
+                                                                                    case gamePageModel.profileResponse of
+                                                                                        SuccessfullyRequested nick ->
+                                                                                            nick
+
+                                                                                        _ ->
+                                                                                            player.nickname
+                                                                            in
+                                                                            span
+                                                                                [ class "link-like"
+                                                                                , onClick MakeNicknameEditable
+                                                                                , title "Edit nickname"
+                                                                                ]
+                                                                                [ text nickname ]
+
+                                                                      else
+                                                                        text player.nickname
                                                                     ]
                                                                 )
                                                             ]

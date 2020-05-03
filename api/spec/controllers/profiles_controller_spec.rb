@@ -20,7 +20,6 @@ RSpec.describe ProfilesController do
 
         expect(response).to be_ok
         expect(json_dig(response, 'data', 'nickname')).to be_present
-        expect(json_dig(response, 'data', 'games')).to eq([])
       end
     end
 
@@ -39,46 +38,6 @@ RSpec.describe ProfilesController do
 
         expect(response).to be_ok
         expect(json_dig(response, 'data', 'nickname')).to eq(human.nickname)
-        expect(json_dig(response, 'data', 'games'))
-          .to match(
-            [
-              {
-                'id' => game.identifier,
-                'actions' => [
-                  {
-                    'created_at' => anything,
-                    'summary' => /joined with 100 chips/
-                  },
-                  {
-                    'created_at' => anything,
-                    'summary' => /joined with 100 chips/
-                  }
-                ],
-                'last_action_at' => Millis.new(game.last_action_at).to_i,
-                'current_dealer_id' => nil,
-                'next_action' => nil,
-                'players' => [{
-                  'id' => human.id,
-                  'chips_count' => 100,
-                  'bet_amount' => 0,
-                  'nickname' => human.nickname,
-                  'current_card' => nil,
-                  'waiting_for_next_hand' => true,
-                  'all_out' => false
-                }, {
-                  'id' => other_human.id,
-                  'chips_count' => 100,
-                  'bet_amount' => 0,
-                  'nickname' => other_human.nickname,
-                  'current_card' => nil,
-                  'waiting_for_next_hand' => true,
-                  'all_out' => false
-                }],
-                'status' => 'pending',
-                'pot_size' => 0
-              }
-            ]
-          )
       end
     end
   end

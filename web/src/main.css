@@ -100,14 +100,17 @@ input[type="text"] {
   display: inline;
 }
 
-a {
+a,
+.link-like {
   text-decoration: underline dotted #9f9f9f;
   color: #1e4594;
 }
 
 a:hover,
-a:active {
+a:active,
+.link-like:hover {
   text-decoration: underline dotted #1e4594;
+  cursor: pointer;
 }
 
 .main-container {
@@ -226,4 +229,8 @@ th {
 
 .red-text {
   color: red;
+}
+
+.edit-nickname {
+  display: inline;
 }
