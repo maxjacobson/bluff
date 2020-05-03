@@ -911,11 +911,11 @@ pollingCmd page flags currentTime =
                 GamePage gamePageModel ->
                     case gamePageModel.gameResponse of
                         SuccessfullyRequested gameResponse ->
-                            if fewerThanMinutesPassedBetween 2 gameResponse.gameData.lastActionAt currentTime && onNthSecond 5 currentTime then
+                            if fewerThanMinutesPassedBetween 5 gameResponse.gameData.lastActionAt currentTime && onNthSecond 5 currentTime then
                                 -- Keep polling every five seconds, because the game is active!
                                 cmdWhenLoadingPage page flags
 
-                            else if greaterThanMinutesPassedBetween 2 gameResponse.human.heartbeatAt currentTime && onNthSecond 5 currentTime then
+                            else if greaterThanMinutesPassedBetween 5 gameResponse.human.heartbeatAt currentTime && onNthSecond 5 currentTime then
                                 -- Keep polling, because we haven't checked in a while.
                                 -- If the game remains inactive, we'll keep polling approx every 5 minutes.
                                 -- If it becomes active (or the player refreshes), we'll resume polling more frequently.
