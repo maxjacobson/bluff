@@ -98,7 +98,7 @@ class Dealer
   # The player after the dealer draws and bets first
   def current_players_in_dealing_order
     players = current_players.to_a
-    (dealer_position = players.index(player_with_dealer_chip)) || raise
+    (dealer_position = players.index(player_with_dealer_chip)) || 0
     players.rotate(dealer_position + 1)
   end
 
