@@ -3,6 +3,7 @@ AllCops:
     # These should all be auto-generated binstubs. Any custom scripts will live
     # in ./exe or ../bin
     - bin/*
+  NewCops: enable
 
 Layout/SpaceAroundMethodCallOperator:
   Enabled: true
@@ -36,3 +37,4 @@ Style/FrozenStringLiteralComment:
 Layout/LineLength:
   Enabled: true
   AutoCorrect: true
+  Max: 80

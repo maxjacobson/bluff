@@ -15,6 +15,7 @@ class ApplicationController < ActionController::API
   private
 
   attr_accessor :current_human
+
   helper_method :current_human
 
   def authorize!(&block)
