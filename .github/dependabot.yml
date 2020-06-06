@@ -1,0 +1,14 @@
+version: 2
+updates:
+- package-ecosystem: bundler
+  directory: "/api"
+  schedule:
+    interval: daily
+    time: '09:00'
+    timezone: US/Eastern
+- package-ecosystem: elm
+  directory: "/web"
+  schedule:
+    interval: daily
+    time: '09:00'
+    timezone: US/Eastern
