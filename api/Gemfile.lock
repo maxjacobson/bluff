@@ -65,11 +65,11 @@ GEM
     crass (1.0.6)
     diff-lcs (1.3)
     erubi (1.9.0)
-    faker (2.11.0)
+    faker (2.12.0)
       i18n (>= 1.6, < 2)
     globalid (0.4.2)
       activesupport (>= 4.2.0)
-    i18n (1.8.2)
+    i18n (1.8.3)
       concurrent-ruby (~> 1.0)
     jaro_winkler (1.5.4)
     jbuilder (2.10.0)
@@ -183,7 +183,7 @@ PLATFORMS
 
 DEPENDENCIES
   bootsnap (>= 1.4.2)
-  faker (~> 2.11)
+  faker (~> 2.12)
   jbuilder (~> 2.7)
   pg (>= 0.18, < 2.0)
   pry-rails
