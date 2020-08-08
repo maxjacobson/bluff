@@ -4,7 +4,7 @@ set -ex
 
 echo "===> Deploying api"
 
-blob=`git subtree split --prefix api master`
+blob=`git subtree split --prefix api main`
 git push heroku "$blob":refs/heads/master --force
 
 echo "===> Done"
