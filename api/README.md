@@ -17,7 +17,7 @@ rails s
 
 ## Deploying
 
-To run from the root:
+To deploy, run this from the root of the repository:
 
 ```
 git remote add heroku https://git.heroku.com/bluff-api.git
