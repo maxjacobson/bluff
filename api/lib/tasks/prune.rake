@@ -8,7 +8,7 @@ namespace :prune do
   CUTOFF = 12.hours
 
   task abandoned_games: :environment do
-    logger = Logger.new(STDOUT)
+    logger = Logger.new($stdout)
 
     Game.find_each do |game|
       if game.last_action_at > CUTOFF.ago
@@ -39,7 +39,7 @@ namespace :prune do
     # We could safely destroy humans who never actually played a game, though.
     # And that would work in concert with the other prune task.
 
-    logger = Logger.new(STDOUT)
+    logger = Logger.new($stdout)
 
     Human.find_each do |human|
       if human.created_at > CUTOFF.ago
