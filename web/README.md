@@ -17,7 +17,7 @@ PORT=3001 elm-app start
 ## Deploying
 
 The front-end auto-deploys to [Netlify](https://www.netlify.com/).
-They just notice when we push to master and they take care of it.
+They just notice when we push to the main branch and they take care of it.
 The build command and some other stuff are defined in the [netlify config file](../netlify.toml).
 
 ## Some links
