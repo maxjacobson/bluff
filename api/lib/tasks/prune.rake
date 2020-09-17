@@ -5,13 +5,13 @@
 # humans that never engaged and games that were never played.
 namespace :prune do
   # Artificially low while I test this out, will increase later
-  CUTOFF = 12.hours
+  cutoff = 12.hours
 
   task abandoned_games: :environment do
     logger = Logger.new($stdout)
 
     Game.find_each do |game|
-      if game.last_action_at > CUTOFF.ago
+      if game.last_action_at > cutoff.ago
         logger.info "Preserving fresh game id=#{game.id}" \
                     "last_action_at=#{game.last_action_at} " \
                     "status=#{game.dealer.status}"
@@ -42,7 +42,7 @@ namespace :prune do
     logger = Logger.new($stdout)
 
     Human.find_each do |human|
-      if human.created_at > CUTOFF.ago
+      if human.created_at > cutoff.ago
         logger.info "Preserving fresh human id=#{human.id}"
         next
       end
