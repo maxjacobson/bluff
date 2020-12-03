@@ -30,7 +30,7 @@ group :development, :test do
 end
 
 group :development do
-  gem 'rubocop', '~> 1.4.2'
+  gem 'rubocop', '~> 1.5.1'
 end
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
