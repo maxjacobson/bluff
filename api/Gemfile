@@ -12,7 +12,7 @@ gem 'pg', '>= 0.18', '< 2.0'
 # Use Puma as the app server
 gem 'puma', '~> 5.1'
 
-gem 'jbuilder', '~> 2.10'
+gem 'jbuilder', '~> 2.11'
 # Use Active Model has_secure_password
 # gem 'bcrypt', '~> 3.1.7'
 
