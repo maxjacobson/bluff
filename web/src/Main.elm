@@ -1188,7 +1188,7 @@ view model =
                         , section []
                             [ h2 [] [ text "Credits" ]
                             , p []
-                                [ text "These icons are from "
+                                [ text "These totally amazing icons are from "
                                 , a [ href "https://www.toicon.com/about", target "_blank" ] [ strong [] [ text "to [icon]" ] ]
                                 , text ":"
                                 , ul [ class "icons-credits" ]
