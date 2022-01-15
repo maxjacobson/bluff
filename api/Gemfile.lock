@@ -137,7 +137,7 @@ GEM
       thor (~> 1.0)
     rainbow (3.0.0)
     rake (13.0.3)
-    rbtree3 (0.6.0)
+    rbtree (0.4.4)
     regexp_parser (2.1.1)
     rexml (3.2.4)
     rspec-core (3.10.1)
@@ -169,9 +169,9 @@ GEM
     rubocop-ast (1.4.1)
       parser (>= 2.7.1.5)
     ruby-progressbar (1.11.0)
-    set (1.0.1)
-    sorted_set (1.0.2)
-      rbtree3
+    set (1.0.2)
+    sorted_set (1.0.3)
+      rbtree
       set (~> 1.0)
     sprockets (4.0.2)
       concurrent-ruby (~> 1.0)
