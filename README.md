@@ -1,3 +1,5 @@
+⚠️ This _was_ online at <https://www.bluff.website> but it was hosted on Heroku's free plan, and they don't offer that anymore, so it stopped working and I took it offline.
+
 # Bluff
 
 An online version of [Blind Man's Bluff](<https://en.wikipedia.org/wiki/Blind_man%27s_bluff_(poker)>).
